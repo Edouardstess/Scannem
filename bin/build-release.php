@@ -309,6 +309,18 @@ HTACCESS);
 file_put_contents($travail . '/demarrer-en-local.bat', str_replace("\n", "\r\n", <<<'BAT'
 @echo off
 setlocal enabledelayedexpansion
+
+rem Deuxieme role de ce fichier : ouvrir le navigateur une fois le serveur en
+rem place. Le serveur integre bloque la fenetre qui le lance, donc l'ouverture
+rem doit venir d'ailleurs. Sans ce detour, le navigateur arrive avant que le port
+rem ne soit ouvert et affiche ERR_CONNECTION_REFUSED sur une installation
+rem parfaitement saine.
+if "%~1"=="--ouvrir" (
+    ping -n 4 127.0.0.1 >nul 2>&1
+    start "" http://localhost:8000/
+    exit /b 0
+)
+
 cd /d "%~dp0"
 
 echo.
@@ -317,13 +329,26 @@ echo   ----------------------------
 echo.
 
 set "PHP="
+set "LOG=%~dp0diagnostic-scannem.txt"
+>"%LOG%" echo Scannem - recherche d'un PHP 8.1 ou plus recent
 
-rem PHP livre avec WampServer, puis avec XAMPP. On parcourt les dossiers du plus
-rem recent au plus ancien (/o-n) et on garde le premier qui convient.
-for %%R in ("C:\wamp64\bin\php" "C:\wamp\bin\php" "C:\xampp\php") do (
-    if exist "%%~R\php.exe" (
-        if not defined PHP call :essayer "%%~R\php.exe"
-    )
+rem Ou chercher, dans l'ordre.
+rem
+rem Les deux premieres entrees sont relatives a CE fichier : depose dans
+rem <wamp>\www\scannem, le dossier des PHP de WampServer est <wamp>\bin\php, et
+rem depuis <xampp>\htdocs\scannem c'est <xampp>\php. Partir de la plutot que de
+rem "C:\wamp64" en dur, c'est fonctionner aussi quand WampServer est installe sur
+rem un autre disque ou dans un dossier renomme.
+for %%R in (
+    "%~dp0..\..\bin\php"
+    "%~dp0..\..\php"
+    "C:\wamp64\bin\php"
+    "C:\wamp\bin\php"
+    "C:\xampp\php"
+) do (
+    if not defined PHP call :essayer "%%~R\php.exe"
+
+    rem Les versions installees par WampServer, du plus recent au plus ancien.
     if exist "%%~R" (
         for /f "delims=" %%D in ('dir /b /ad /o-n "%%~R" 2^>nul') do (
             if not defined PHP call :essayer "%%~R\%%D\php.exe"
@@ -341,13 +366,19 @@ if not defined PHP (
 if not defined PHP (
     echo   Aucun PHP 8.1 ou plus recent n'a ete trouve sur cette machine.
     echo.
-    echo   Scannem et ses dependances de generation de QR en ont besoin.
-    echo   WampServer ne propose que les versions deja installees : pour en
-    echo   ajouter une, telecharge un module PHP recent sur
+    echo   Scannem et ses dependances de generation de QR en ont besoin, et
+    echo   PHP 8.0 n'est plus suivi en securite depuis fin 2023.
     echo.
-    echo       wampserver.aviatechno.net   -   rubrique "PHP versions"
+    echo   Pour en installer un, sans rien casser a ton WampServer actuel :
     echo.
-    echo   lance son installateur, puis relance ce fichier.
+    echo     1. va sur   wampserver.aviatechno.net
+    echo     2. rubrique "PHP versions", telecharge PHP 8.2 ou 8.3
+    echo     3. lance l'installateur telecharge
+    echo     4. relance ce fichier
+    echo.
+    echo   Le detail de la recherche est dans   diagnostic-scannem.txt
+    echo   a cote de ce fichier. En cas de doute, c'est ce fichier qu'il faut
+    echo   montrer : il dit exactement ou j'ai regarde et ce que j'ai trouve.
     echo.
     pause
     exit /b 1
@@ -355,16 +386,20 @@ if not defined PHP (
 
 echo   PHP utilise : !PHP!
 echo.
-echo   Ouvre : http://localhost:8000/
+echo   ====================================
+echo     http://localhost:8000/
+echo   ====================================
+echo.
+echo   Le navigateur s'ouvre dans trois secondes. S'il ne s'ouvre pas, ouvre
+echo   l'adresse ci-dessus a la main.
 echo.
 echo   Cette fenetre EST le serveur : la fermer arrete Scannem.
-echo   Le navigateur s'ouvre avant que le serveur n'ait fini de demarrer : si
-echo   la page ne s'affiche pas du premier coup, rafraichis-la.
-echo   Si le port 8000 est deja pris, le demarrage echouera juste en dessous ;
-echo   remplace alors 8000 par 8001 dans les deux dernieres lignes utiles.
+echo   Si le port 8000 est deja pris, le demarrage echoue juste en dessous ;
+echo   remplace alors 8000 par 8001 aux deux endroits ou il apparait plus haut
+echo   dans ce fichier.
 echo.
 
-start "" http://localhost:8000/
+start "" /min "%~f0" --ouvrir
 "!PHP!" -S localhost:8000
 
 echo.
@@ -375,12 +410,20 @@ exit /b 0
 rem ---------------------------------------------------------------------------
 rem Retient le binaire passe en argument s'il existe et annonce au moins 8.1.
 rem C'est PHP lui-meme qui repond : aucun numero de version a deviner d'apres un
-rem nom de dossier. version_compare plutot qu'une comparaison numerique parce
-rem que < et >= sont des operateurs de redirection pour cmd.exe.
+rem nom de dossier, que WampServer choisit librement. version_compare et non une
+rem comparaison numerique, parce que < et >= sont des operateurs de redirection
+rem pour cmd.exe.
 :essayer
 if not exist "%~1" exit /b 0
+>>"%LOG%" echo %~1
+
+rem C'est PHP qui ecrit lui-meme sa version dans le journal. Passer par
+rem "for /f" pour relire sa sortie obligerait a lancer un executable dont le
+rem chemin est entre guillemets : cmd.exe s'y prend les pieds une fois sur deux.
+"%~1" -r "file_put_contents(getenv('LOG'), '   PHP '.PHP_VERSION.(version_compare(PHP_VERSION,'8.1','ge')?' - convient':' - trop ancien').PHP_EOL, FILE_APPEND);" >nul 2>&1
+
 "%~1" -r "exit(version_compare(PHP_VERSION,'8.1','ge')?0:1);" >nul 2>&1
-if not errorlevel 1 set "PHP=%~1"
+if not errorlevel 1 if not defined PHP set "PHP=%~1"
 exit /b 0
 BAT));
 

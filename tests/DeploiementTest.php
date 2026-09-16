@@ -261,6 +261,40 @@ final class DeploiementTest extends TestCase
         );
     }
 
+    public function testLeLanceurWindowsChercheDAbordAuOnLAPose(): void
+    {
+        $source = (string) file_get_contents(Config::rootPath('bin/build-release.php'));
+
+        // Depose dans <wamp>\www\scannem, le dossier des PHP de WampServer est
+        // <wamp>\bin\php. Partir de la plutot que d'un C:\wamp64 ecrit en dur,
+        // c'est fonctionner quand WampServer est sur un autre disque.
+        self::assertStringContainsString(
+            '"%~dp0..\\..\\bin\\php"',
+            $source,
+            'Le lanceur doit chercher relativement a son propre emplacement'
+        );
+    }
+
+    public function testLeLanceurWindowsNOuvrePasLeNavigateurTropTot(): void
+    {
+        $source = (string) file_get_contents(Config::rootPath('bin/build-release.php'));
+
+        // Le serveur integre bloque la fenetre qui le lance : l'ouverture doit
+        // venir d'ailleurs, sinon le navigateur arrive avant que le port ne soit
+        // ouvert et affiche ERR_CONNECTION_REFUSED sur une installation saine.
+        self::assertStringContainsString(
+            'start "" /min "%~f0" --ouvrir',
+            $source,
+            'Le lanceur doit differer l ouverture du navigateur'
+        );
+
+        self::assertStringContainsString(
+            'ping -n 4 127.0.0.1',
+            $source,
+            'Le detour doit laisser au serveur le temps d ouvrir son port'
+        );
+    }
+
     public function testLeLanceurWindowsResteEnAsciiEtEnCrLf(): void
     {
         $source = (string) file_get_contents(Config::rootPath('bin/build-release.php'));
