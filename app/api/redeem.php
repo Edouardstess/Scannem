@@ -14,10 +14,11 @@ declare(strict_types=1);
  */
 
 use Scannem\App;
+use Scannem\Db;
 use Scannem\Http;
 use Scannem\ScanResult;
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+require __DIR__ . '/bootstrap.php';
 
 Http::requireMethod('POST');
 
@@ -31,13 +32,18 @@ if ($payload === '' || strlen($payload) > 256) {
     Http::error('Payload absent ou invalide.', 422, 'bad_payload');
 }
 
-$outcome = $app->cards()->redeem(
+// Reessai en cas de contention : a plusieurs portes simultanees, la base peut
+// refuser une ecriture le temps qu'un autre scan se termine. Rejouer est sans
+// danger, l'invalidation etant un UPDATE conditionnel unique : soit elle a eu
+// lieu et le rejeu repond « deja utilisee », soit elle n'a pas eu lieu et le
+// rejeu admet. Dans aucun cas la carte n'est consommee deux fois.
+$outcome = Db::retryOnLock(static fn (): array => $app->cards()->redeem(
     $payload,
     (int) $device['id'],
     Http::clientAt($body['client_at'] ?? null),
     false,
     Http::clientIp()
-);
+));
 
 $response = [
     'ok' => true,

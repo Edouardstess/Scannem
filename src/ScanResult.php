@@ -35,6 +35,15 @@ final class ScanResult
     public const RATE_LIMITED = 'rate_limited';
 
     /**
+     * Serveur momentanement incapable de repondre (contention, panne breve).
+     *
+     * A ne surtout pas confondre avec un refus : la carte n'a PAS ete consommee
+     * et la personne n'a rien fait de mal. L'ecran doit le dire clairement,
+     * sinon un vigile presse refuse quelqu'un de parfaitement legitime.
+     */
+    public const SERVER_BUSY = 'server_busy';
+
+    /**
      * Libelles affiches au vigile. Courts, sans ambiguite, lisibles a bout de bras.
      *
      * @return array<string,string>
@@ -50,6 +59,7 @@ final class ScanResult
             self::OFFLINE_PENDING => 'HORS-LIGNE - A CONFIRMER',
             self::DISPUTED => 'LITIGE - DOUBLON HORS-LIGNE',
             self::RATE_LIMITED => 'TROP DE SCANS - PATIENTEZ',
+            self::SERVER_BUSY => 'SERVEUR OCCUPE - RESCANNE',
         ];
     }
 
@@ -63,9 +73,22 @@ final class ScanResult
     {
         return match ($result) {
             self::ADMITTED => 'green',
-            self::OFFLINE_PENDING => 'amber',
+            // Orange et non rouge : rien n'a ete refuse, il faut simplement
+            // rescanner. Le rouge signifierait a tort que la carte est mauvaise.
+            self::OFFLINE_PENDING, self::SERVER_BUSY, self::RATE_LIMITED => 'amber',
             default => 'red',
         };
+    }
+
+    /**
+     * La carte a-t-elle ete consommee par ce scan ?
+     *
+     * Sert a distinguer un vrai verdict d'un incident technique : sur un
+     * incident, rescanner la meme carte est sans danger.
+     */
+    public static function isVerdict(string $result): bool
+    {
+        return !in_array($result, [self::SERVER_BUSY, self::RATE_LIMITED], true);
     }
 
     public static function isAdmission(string $result): bool

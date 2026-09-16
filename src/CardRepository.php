@@ -40,9 +40,11 @@ final class CardRepository
         $now = Db::now();
         $keyId = $this->token->activeKeyId();
 
-        $this->pdo->beginTransaction();
-
-        try {
+        // Ici la transaction paie franchement, a l'inverse du chemin de scan :
+        // des milliers d'INSERT groupes en une seule transaction evitent autant
+        // de validations disque, et la generation d'un lot se fait a froid, sans
+        // personne qui attend a la porte.
+        return Db::transaction($this->pdo, function () use ($name, $eventDate, $quantity, $now, $keyId): array {
             $this->pdo->prepare(
                 'INSERT INTO batches (name, event_date, quantity, created_at) VALUES (?, ?, ?, ?)'
             )->execute([$name, $eventDate, $quantity, $now]);
@@ -75,13 +77,8 @@ final class CardRepository
                 $cards[] = ['uid' => $uid, 'payload' => $this->token->build($uid, $keyId)];
             }
 
-            $this->pdo->commit();
-
             return ['batch_id' => $batchId, 'cards' => $cards];
-        } catch (PDOException $e) {
-            $this->pdo->rollBack();
-            throw $e;
-        }
+        });
     }
 
     /**
@@ -95,6 +92,16 @@ final class CardRepository
      * Un SELECT suivi d'un UPDATE laisserait passer les deux : entre la lecture et
      * l'ecriture, les deux processus voient la carte encore active. C'est l'erreur
      * classique, et elle annule tout l'interet du systeme.
+     *
+     * L'UPDATE et l'ecriture au journal tiennent dans UNE transaction, pour deux
+     * raisons. D'integrite : si le processus mourait entre les deux, la carte
+     * serait consommee sans aucune trace de qui est entre, et la personne
+     * suivante se ferait refuser sans explication possible. De debit : sous
+     * SQLite chaque ecriture prend le verrou global de la base, une transaction
+     * ne le prend qu'une fois au lieu de deux.
+     *
+     * L'appel est relancable : un echec ne valide rien, donc Db::retryOnLock()
+     * peut le rejouer sans risque de consommer deux fois la meme carte.
      *
      * @return array{result:string, card:?array<string,mixed>, first_scan:?array<string,mixed>}
      */
@@ -115,14 +122,28 @@ final class CardRepository
         }
 
         $uid = (string) $check['uid'];
-        $now = Db::now();
 
+        // Volontairement en autocommit, sans transaction englobante.
+        //
+        // Envelopper cet UPDATE et l'ecriture au journal dans une transaction
+        // paraissait plus propre, mais la mesure dit le contraire : sous SQLite
+        // tous les ecrivains se serialisent sur un verrou global, et toute
+        // transaction allonge la section critique. A vingt portes simultanees,
+        // le debit tombait de ~1300 a ~120 scans/s (et a ~50 avec BEGIN
+        // IMMEDIATE, qui prend le verrou encore plus tot). L'autocommit donne
+        // les sections critiques les plus courtes possibles.
+        //
+        // Ce que la transaction devait proteger : un plantage entre l'UPDATE et
+        // l'INSERT au journal. Le risque est en realite mineur, parce que cet
+        // UPDATE ecrit lui-meme used_at ET used_by_device sur la carte : l'heure
+        // et la porte survivent au plantage, seule la ligne de journal manque.
+        // firstAdmission() sait retomber sur la carte dans ce cas.
         $update = $this->pdo->prepare(
             "UPDATE cards
                 SET status = 'used', used_at = ?, used_by_device = ?
               WHERE uid = ? AND status = 'active'"
         );
-        $update->execute([$now, $deviceId, $uid]);
+        $update->execute([Db::now(), $deviceId, $uid]);
 
         if ($update->rowCount() === 1) {
             $this->logScan($uid, $deviceId, ScanResult::ADMITTED, $clientAt, $ip, $wasOffline);
@@ -134,8 +155,7 @@ final class CardRepository
             ];
         }
 
-        // Zero ligne modifiee. Trois causes possibles : deja utilisee, revoquee,
-        // ou inexistante. On relit pour afficher le bon message au vigile.
+        // Zero ligne modifiee : deja utilisee, revoquee, ou inexistante.
         $card = $this->findByUid($uid);
 
         if ($card === null) {
@@ -200,7 +220,17 @@ final class CardRepository
         return $row === false ? null : $row;
     }
 
-    /** Premiere admission enregistree pour une carte : l'heure et la porte. */
+    /**
+     * Premiere admission enregistree pour une carte : l'heure et la porte.
+     *
+     * C'est ce que le vigile lit quand il refuse quelqu'un — sans cette
+     * information, « deja utilisee » est invérifiable face a la personne.
+     *
+     * D'ou le repli sur la carte elle-meme quand le journal ne dit rien : son
+     * UPDATE d'invalidation a ecrit used_at et used_by_device dans le meme geste
+     * atomique, donc l'heure et la porte sont toujours recuperables, meme si le
+     * processus est mort avant d'ecrire au journal.
+     */
     public function firstAdmission(string $uid): ?array
     {
         $stmt = $this->pdo->prepare(
@@ -215,7 +245,45 @@ final class CardRepository
 
         $row = $stmt->fetch();
 
-        return $row === false ? null : $row;
+        if ($row !== false) {
+            return $row;
+        }
+
+        return $this->admissionDepuisLaCarte($uid);
+    }
+
+    /**
+     * Reconstruit l'admission a partir de la ligne de carte, journal absent.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function admissionDepuisLaCarte(string $uid): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT c.used_at, c.used_by_device, d.label AS device_label
+               FROM cards c
+          LEFT JOIN devices d ON d.id = c.used_by_device
+              WHERE c.uid = ? AND c.used_at IS NOT NULL"
+        );
+        $stmt->execute([$uid]);
+
+        $row = $stmt->fetch();
+
+        if ($row === false) {
+            return null;
+        }
+
+        return [
+            'uid' => $uid,
+            'device_id' => $row['used_by_device'],
+            'device_label' => $row['device_label'],
+            'result' => ScanResult::ADMITTED,
+            'server_at' => $row['used_at'],
+            'client_at' => null,
+            'ip' => null,
+            'was_offline' => 0,
+            'note' => 'Reconstruit depuis la carte : ligne de journal absente.',
+        ];
     }
 
     /**

@@ -145,6 +145,93 @@ reconnaître un refus sans regarder l'écran.
 
 ---
 
+## Plusieurs portes en simultané
+
+Oui, plusieurs vigiles peuvent scanner en même temps. Ce n'est pas une intention,
+c'est mesuré.
+
+### Le conflit qui compte : la même carte à deux portes
+
+Résolu par un `UPDATE` conditionnel atomique. Le test `ConcurrencyTest` lance
+10 processus réels sur la même carte copiée : **exactement un est admis**.
+`ThroughputTest` va plus loin avec 20 processus simultanés, sur SQLite comme sur
+MySQL.
+
+### Débit mesuré
+
+20 processus concurrents, médiane sur 7 exécutions :
+
+| Base | Débit |
+|---|---|
+| SQLite (WAL) | **~900 scans/s** |
+| MySQL / InnoDB | **~1 560 scans/s** |
+
+Pour donner l'échelle : une entrée dense, c'est 1 à 5 scans par seconde. Même
+SQLite est environ **200 fois au-dessus** du besoin réel.
+
+> Ces chiffres mesurent la base de données, pas ton hébergement. Le vrai facteur
+> limitant sera PHP et le réseau, pas Scannem. Le serveur de test `php -S` est
+> mono-processus : en production, php-fpm sert plusieurs requêtes en parallèle.
+
+### SQLite ou MySQL ?
+
+**SQLite suffit dans l'immense majorité des cas**, y compris à plus de 10 portes.
+
+MySQL devient préférable si tu es dans un de ces cas :
+- plusieurs milliers de personnes avec une entrée très dense ;
+- plusieurs serveurs PHP partageant la même base (SQLite ne le permet pas) ;
+- un hébergement dont le disque est lent ou distant (NFS), où SQLite souffre.
+
+La bascule est une ligne dans `storage/config.php` (`db_driver`), sans rien
+réécrire. Toute la suite de tests tourne sur les deux moteurs.
+
+### Ce qui a été fait pour tenir la charge
+
+- **Le quota par IP a été retiré des routes authentifiées.** À un événement,
+  toutes les portes passent par le même Wi-Fi et sortent donc sur **une seule IP
+  publique**. Un quota sur cette IP les aurait bridées collectivement : à douze
+  portes, chacune n'aurait eu droit qu'à un douzième du plafond, et les vigiles
+  auraient vu des refus « trop de scans » sans comprendre pourquoi. Le quota par
+  appareil, lui, reste en place. (Le quota par IP demeure sur `/api/enroll`,
+  seule route ouverte sans jeton.)
+- **`last_seen_at` n'est rafraîchi qu'une fois par minute** et par appareil, au
+  lieu d'une écriture à chaque requête.
+- **Le chemin de scan reste en autocommit, délibérément.** Envelopper
+  l'invalidation et le journal dans une transaction paraissait plus propre, mais
+  la mesure dit l'inverse : sous SQLite tous les écrivains se sérialisent sur un
+  verrou global, et le débit tombait de ~1 300 à ~120 scans/s (et à ~50 avec
+  `BEGIN IMMEDIATE`). L'`UPDATE` d'invalidation écrit lui-même `used_at` et
+  `used_by_device` sur la carte, donc l'heure et la porte survivent même si la
+  ligne de journal manque — `firstAdmission()` sait retomber dessus.
+- **Réessai automatique sur contention**, avec recul exponentiel et part
+  aléatoire, sur `redeem` et `sync`.
+
+### Quand le serveur sature
+
+Une route API ne renvoie **jamais** de page d'erreur PHP. Deux cas, deux écrans :
+
+| Situation | Réponse | Écran vigile |
+|---|---|---|
+| Contention passagère | `503` `server_busy` | **orange**, « rescanne, la carte n'a pas été utilisée » |
+| Défaillance inattendue | `500` JSON maîtrisé | **rouge**, « préviens l'organisateur » |
+
+L'orange est délibéré : un incident technique ne doit **pas** ressembler à un
+refus de carte, sinon un vigile pressé refuse quelqu'un de légitime. Après un
+« serveur occupé », rescanner la même carte repart immédiatement — l'anti-rebond
+est levé pour ce cas.
+
+Aucune trace d'exécution n'est jamais renvoyée au client.
+
+### Quota : Redis est inutile ici
+
+Le quota s'appuie sur la base par défaut (`rate_limit_driver = db`). Un backend
+Redis existe (`redis`), mais **les mesures montrent qu'il n'apporte rien** à ces
+volumes : ne l'active que si tu as déjà un Redis en service. Le mode `auto`
+tenterait une connexion Redis à chaque requête, ce qui coûte plus cher que ça ne
+rapporte sur un hébergement qui n'en a pas — d'où le défaut `db`. Si Redis est
+demandé mais injoignable, le quota retombe sur la base : une entrée ne s'arrête
+jamais parce qu'un cache est tombé.
+
 ## Choix techniques
 
 ### Format du QR
@@ -214,14 +301,35 @@ clé. Au pire, un téléphone volé apprend combien de cartes existent.
 vendor/bin/phpunit
 ```
 
-49 tests. Les plus importants :
+59 tests. Les plus importants :
 
 - **`ConcurrencyTest`** — 10 processus concurrents sur la même carte copiée :
   exactement un admis. C'est la preuve que l'anti-copie tient sous charge.
+- **`ThroughputTest`** — 20 processus sur 20 cartes différentes : tous admis,
+  zéro erreur, et le débit est affiché. Plus le régime mélangé (trafic normal +
+  une carte copiée présentée à plusieurs portes) et la non-régression du quota
+  derrière une même IP.
 - `TokenTest` — signature altérée, tronquée, mauvaise clé, rotation de clé.
 - `OfflineSyncTest` — litiges, non-régression sur le rejeu de file, absence de
   fuite d'IP vers les téléphones.
-- `RateLimiterTest` — plafonds et remise à zéro de fenêtre.
+- `CardRepositoryTest` — dont la survie de l'heure et de la porte quand la ligne
+  de journal a été perdue.
+- `RateLimiterTest` — plafonds, fenêtres, choix du backend, repli quand Redis ne
+  répond pas.
+
+### Faire tourner la suite sur MySQL aussi
+
+Par défaut seul SQLite est testé. Pour couvrir les deux moteurs :
+
+```bash
+SCANNEM_TEST_MYSQL='mysql:host=127.0.0.1;dbname=scannem_test;charset=utf8mb4' \
+SCANNEM_TEST_MYSQL_USER=scannem \
+SCANNEM_TEST_MYSQL_PASS='...' \
+vendor/bin/phpunit
+```
+
+Sans ces variables, les cas MySQL sont **sautés** plutôt qu'en échec, pour que la
+suite reste exécutable partout.
 
 ---
 

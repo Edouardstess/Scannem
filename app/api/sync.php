@@ -19,7 +19,7 @@ declare(strict_types=1);
 use Scannem\App;
 use Scannem\Http;
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+require __DIR__ . '/bootstrap.php';
 
 Http::requireMethod('POST');
 
@@ -39,11 +39,14 @@ if (count($queue) > 2000) {
     Http::error('File trop longue, envoie-la par tranches de 2000.', 413, 'queue_too_long');
 }
 
-$outcome = $app->offlinePack()->sync(
+// Chaque entree est rejouable individuellement (UPDATE conditionnel unique), on
+// enveloppe donc la file entiere : une contention passagere ne doit pas obliger
+// le telephone a tout renvoyer, ce qui creerait de faux litiges.
+$outcome = \Scannem\Db::retryOnLock(static fn (): array => $app->offlinePack()->sync(
     $app->cards(),
     $queue,
     (int) $device['id'],
     Http::clientIp()
-);
+));
 
 Http::json(['ok' => true] + $outcome);

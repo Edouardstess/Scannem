@@ -150,7 +150,9 @@
     revoked: 'CARTE ANNULEE',
     unknown: 'CARTE INCONNUE',
     offline_pending: 'ADMIS SOUS RESERVE',
-    rate_limited: 'TROP DE SCANS'
+    rate_limited: 'TROP DE SCANS',
+    server_busy: 'SERVEUR OCCUPE',
+    server_error: 'ERREUR SERVEUR'
   };
 
   var ICONES = {
@@ -160,12 +162,19 @@
     revoked: '✕',
     unknown: '?',
     offline_pending: '⚠',
-    rate_limited: '⏱'
+    rate_limited: '⏱',
+    server_busy: '↻',
+    server_error: '✕'
   };
+
+  // Incidents techniques : la carte n'a PAS ete consommee, rescanner est sans
+  // danger. Ils ne doivent donc jamais s'afficher en rouge, sinon un vigile
+  // presse refuse quelqu'un de parfaitement legitime.
+  var INCIDENTS = ['server_busy', 'rate_limited'];
 
   function couleur(resultat) {
     if (resultat === 'admitted') return 'green';
-    if (resultat === 'offline_pending') return 'amber';
+    if (resultat === 'offline_pending' || INCIDENTS.indexOf(resultat) !== -1) return 'amber';
     return 'red';
   }
 
@@ -274,6 +283,18 @@
         // Reponse inattendue : on bascule en hors-ligne plutot que de bloquer
         // la file d'attente a l'entree.
         horsLigne(payload);
+        return;
+      }
+
+      // Incident technique : la carte n'a pas ete consommee. On libere
+      // immediatement l'anti-rebond, sinon le vigile qui represente la meme
+      // carte dans la seconde se heurterait a un ecran muet pendant 2,5 s.
+      if (INCIDENTS.indexOf(r.data.result) !== -1) {
+        etat.dernierCode = '';
+        afficherVerdict(
+          r.data.result,
+          echapper(r.data.message || '') + '<br><br><strong>La carte n a pas ete utilisee.</strong>'
+        );
         return;
       }
 

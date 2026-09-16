@@ -34,7 +34,23 @@ final class Config
         // Quotas anti-abus (fenetre glissante en secondes)
         'rate_limit_window' => 60,
         'rate_limit_max_per_device' => 120,
+        // Ne s'applique qu'a /api/enroll. Les routes authentifiees utilisent le
+        // seau par appareil : a un evenement, toutes les portes sortent sur une
+        // seule IP publique et un quota par IP les briderait collectivement.
         'rate_limit_max_per_ip' => 240,
+
+        // db (defaut) | redis | auto | none.
+        //
+        // Volontairement 'db' et non 'auto' : en mode auto, chaque requete
+        // tenterait une connexion Redis, y compris sur les hebergements qui n'en
+        // ont pas, et paierait l'aller-retour pour rien. Les mesures montrent
+        // que le quota en base tient plusieurs centaines de scans par seconde,
+        // tres au-dela d'une entree reelle. Redis ne se justifie que si tu en as
+        // deja un : dans ce cas, mets 'redis'.
+        'rate_limit_driver' => 'db',
+        'redis_host' => '127.0.0.1',
+        'redis_port' => 6379,
+        'redis_password' => '',
 
         // Nom affiche dans l'interface
         'app_name' => 'Scannem',

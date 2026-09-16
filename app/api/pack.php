@@ -14,7 +14,7 @@ declare(strict_types=1);
 use Scannem\App;
 use Scannem\Http;
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+require __DIR__ . '/bootstrap.php';
 
 Http::requireMethod('GET');
 

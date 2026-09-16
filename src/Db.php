@@ -208,4 +208,124 @@ final class Db
     {
         return gmdate('Y-m-d\TH:i:s\Z');
     }
+
+    // ------------------------------------------------- Transactions et verrous
+
+    /**
+     * Execute une operation dans une transaction, en tolerant l'imbrication.
+     *
+     * Si une transaction est deja ouverte (createBatch, ou une synchronisation
+     * qui enveloppe plusieurs redeem), on se contente d'executer : ni PDO ni
+     * SQLite ne gerent les transactions reellement imbriquees, et ouvrir une
+     * seconde transaction lancerait une exception.
+     *
+     * @template T
+     * @param callable():T $operation
+     * @return T
+     */
+    public static function transaction(PDO $pdo, callable $operation): mixed
+    {
+        if ($pdo->inTransaction()) {
+            return $operation();
+        }
+
+        $sqlite = self::driverOf($pdo) === 'sqlite';
+
+        if ($sqlite) {
+            // BEGIN IMMEDIATE, et surtout pas le BEGIN par defaut de
+            // PDO::beginTransaction().
+            //
+            // Le BEGIN par defaut est « deferred » : la transaction demarre en
+            // lecture et doit monter en ecriture au premier UPDATE. Quand un
+            // autre processus tient deja le verrou, cette montee echoue sans
+            // respecter busy_timeout et retombe sur le gestionnaire d'attente de
+            // SQLite, dont les paliers de sommeil vont jusqu'a 25 ms. A vingt
+            // portes qui scannent ensemble, le debit mesure s'effondrait d'un
+            // facteur dix (environ 1300 scans/s -> 120).
+            //
+            // IMMEDIATE prend le verrou d'ecriture des le depart : plus de
+            // montee a mi-parcours, et l'attente redevient celle, fine, de
+            // busy_timeout.
+            $pdo->exec('BEGIN IMMEDIATE');
+        } else {
+            $pdo->beginTransaction();
+        }
+
+        try {
+            $resultat = $operation();
+
+            $sqlite ? $pdo->exec('COMMIT') : $pdo->commit();
+
+            return $resultat;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $sqlite ? $pdo->exec('ROLLBACK') : $pdo->rollBack();
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Rejoue une operation bloquee par la contention, avec recul exponentiel.
+     *
+     * A une entree, plusieurs portes ecrivent en meme temps. Sous SQLite tous
+     * les ecrivains se serialisent sur un verrou global ; sous MySQL deux
+     * transactions peuvent s'interbloquer. Dans les deux cas le moteur refuse
+     * l'operation au lieu de la corrompre, et la bonne reponse est de reessayer.
+     *
+     * Ce n'est sur QUE parce que les operations concernees sont transactionnelles
+     * : un echec ne valide rien, donc rejouer ne peut pas consommer deux fois la
+     * meme carte. Ne jamais envelopper une operation qui ecrit hors transaction.
+     *
+     * @template T
+     * @param callable():T $operation
+     * @return T
+     */
+    public static function retryOnLock(callable $operation, int $tentatives = 4): mixed
+    {
+        $essai = 0;
+
+        while (true) {
+            try {
+                return $operation();
+            } catch (PDOException $e) {
+                $essai++;
+
+                if ($essai >= $tentatives || !self::isLockContention($e)) {
+                    throw $e;
+                }
+
+                // Recul exponentiel avec gigue : sans la part aleatoire, deux
+                // processus repousses en meme temps reessaieraient ensemble et
+                // se bloqueraient a nouveau, indefiniment.
+                $baseUs = 20_000 * (2 ** ($essai - 1));
+                usleep((int) ($baseUs / 2 + random_int(0, (int) $baseUs)));
+            }
+        }
+    }
+
+    /** L'erreur traduit-elle une contention (et non une faute de programmation) ? */
+    public static function isLockContention(PDOException $e): bool
+    {
+        $code = $e->errorInfo[1] ?? null;
+
+        // MySQL : 1213 interblocage, 1205 attente de verrou expiree.
+        if ($code === 1213 || $code === 1205) {
+            return true;
+        }
+
+        // SQLite : 5 (SQLITE_BUSY) et 6 (SQLITE_LOCKED). Le pilote ne les
+        // remonte pas toujours dans errorInfo, d'ou la lecture du message.
+        if ($code === 5 || $code === 6) {
+            return true;
+        }
+
+        $message = strtolower($e->getMessage());
+
+        return str_contains($message, 'database is locked')
+            || str_contains($message, 'database table is locked')
+            || str_contains($message, 'deadlock')
+            || str_contains($message, 'lock wait timeout');
+    }
 }

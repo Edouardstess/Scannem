@@ -119,10 +119,32 @@ final class Auth
             return null;
         }
 
-        $this->pdo->prepare('UPDATE devices SET last_seen_at = ? WHERE id = ?')
-            ->execute([Db::now(), $row['id']]);
+        // « Vu pour la derniere fois » n'est que de l'affichage pour l'admin. Le
+        // rafraichir a chaque requete couterait une ecriture par scan, et sous
+        // SQLite toute ecriture prend le verrou global de la base. On ne le
+        // touche donc qu'une fois par minute et par appareil : la ligne est
+        // deja lue ci-dessus, la decision ne coute aucune requete de plus.
+        if (self::doitRafraichirVu($row['last_seen_at'] ?? null)) {
+            $this->pdo->prepare('UPDATE devices SET last_seen_at = ? WHERE id = ?')
+                ->execute([Db::now(), $row['id']]);
+        }
 
         return $row;
+    }
+
+    /** Intervalle minimal entre deux rafraichissements de last_seen_at, en secondes. */
+    private const VU_INTERVALLE = 60;
+
+    public static function doitRafraichirVu(?string $dernierVu): bool
+    {
+        if ($dernierVu === null || $dernierVu === '') {
+            return true;
+        }
+
+        $vu = strtotime($dernierVu);
+
+        // Horodatage illisible : on reecrit pour repartir sur une valeur saine.
+        return $vu === false || (time() - $vu) >= self::VU_INTERVALLE;
     }
 
     /** Lit le jeton d'appareil dans l'en-tete Authorization ou X-Device-Token. */

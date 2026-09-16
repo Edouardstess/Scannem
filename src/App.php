@@ -15,7 +15,7 @@ final class App
 
     private ?CardRepository $cards = null;
     private ?Auth $auth = null;
-    private ?RateLimiter $limiter = null;
+    private ?RateLimiterInterface $limiter = null;
     private ?OfflinePack $pack = null;
     private ?Token $token = null;
 
@@ -61,7 +61,7 @@ final class App
         return $this->auth ??= new Auth($this->pdo, $this->config);
     }
 
-    public function limiter(): RateLimiter
+    public function limiter(): RateLimiterInterface
     {
         return $this->limiter ??= RateLimiter::fromConfig($this->pdo, $this->config);
     }
@@ -81,16 +81,6 @@ final class App
      */
     public function requireDevice(): array
     {
-        $ip = Http::clientIp();
-        $limiter = $this->limiter();
-
-        // Quota par IP d'abord : il s'applique meme sans jeton valide, sinon on
-        // offrirait un banc d'essai gratuit pour deviner des jetons.
-        if ($ip !== null && !$limiter->allow('ip:' . $ip, $this->config->int('rate_limit_max_per_ip', 240))) {
-            header('Retry-After: ' . $limiter->retryAfter());
-            Http::error('Trop de requetes depuis cette connexion.', 429, ScanResult::RATE_LIMITED);
-        }
-
         $device = $this->auth()->deviceFromToken(Auth::tokenFromRequest());
 
         if ($device === null) {
@@ -98,13 +88,35 @@ final class App
             Http::error('Appareil non autorise. Enrole-le depuis l interface d administration.', 401, 'unauthorized');
         }
 
-        $deviceKey = 'device:' . $device['id'];
-
-        if (!$limiter->allow($deviceKey, $this->config->int('rate_limit_max_per_device', 120))) {
-            header('Retry-After: ' . $limiter->retryAfter());
+        if (!$this->quotaAutorise((int) $device['id'])) {
+            header('Retry-After: ' . $this->limiter()->retryAfter());
             Http::error('Trop de scans sur cet appareil, patiente quelques secondes.', 429, ScanResult::RATE_LIMITED);
         }
 
         return $device;
+    }
+
+    /**
+     * Quota d'un appareil authentifie.
+     *
+     * Volontairement **sans seau par adresse IP**. A un evenement, toutes les
+     * portes passent par le Wi-Fi du lieu ou un partage de connexion : elles
+     * sortent donc sur une seule IP publique. Un quota applique a cette IP les
+     * briderait collectivement — a douze portes, chacune n'aurait droit qu'a un
+     * douzieme du plafond et les vigiles verraient des refus « trop de scans »
+     * en pleine entree, sans cause visible.
+     *
+     * Le seau par appareil suffit : il est deja individuel, et l'appareil a du
+     * etre enrole pour exister. Le seau par IP reste en place sur /api/enroll,
+     * seule route ouverte sans jeton et donc reellement attaquable.
+     *
+     * Effet secondaire appreciable : une ecriture en base de moins par scan.
+     */
+    public function quotaAutorise(int $deviceId): bool
+    {
+        return $this->limiter()->allow(
+            'device:' . $deviceId,
+            $this->config->int('rate_limit_max_per_device', 120)
+        );
     }
 }

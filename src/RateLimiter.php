@@ -17,7 +17,7 @@ use PDO;
  * Fenetre fixe plutot que glissante : c'est moins precis aux bordures, mais ca
  * tient en une ligne de table et ca fonctionne identiquement sur SQLite et MySQL.
  */
-final class RateLimiter
+final class RateLimiter implements RateLimiterInterface
 {
     public function __construct(
         private readonly PDO $pdo,
@@ -25,9 +25,39 @@ final class RateLimiter
     ) {
     }
 
-    public static function fromConfig(PDO $pdo, Config $config): self
+    /**
+     * Choisit le backend de quota selon la configuration.
+     *
+     * `rate_limit_driver` : auto (defaut) | db | redis | none.
+     *
+     * En mode auto, Redis n'est retenu que s'il repond : une installation sans
+     * Redis n'a rien a configurer, et un Redis tombe ne doit pas empecher les
+     * entrees. Le repli en base est donc toujours disponible.
+     */
+    public static function fromConfig(PDO $pdo, Config $config): RateLimiterInterface
     {
-        return new self($pdo, $config->int('rate_limit_window', 60));
+        $fenetre = $config->int('rate_limit_window', 60);
+        $driver = $config->str('rate_limit_driver', 'auto');
+
+        if ($driver === 'none') {
+            return new NullRateLimiter();
+        }
+
+        if ($driver === 'redis' || $driver === 'auto') {
+            $redis = RedisRateLimiter::tryConnect($config);
+
+            if ($redis !== null) {
+                return $redis;
+            }
+
+            // En mode 'redis' explicite, l'exploitant a demande Redis : on le
+            // signale au journal plutot que de basculer en silence.
+            if ($driver === 'redis') {
+                error_log('[scannem] Redis injoignable, repli du quota sur la base de donnees.');
+            }
+        }
+
+        return new self($pdo, $fenetre);
     }
 
     /**
