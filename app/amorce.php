@@ -122,10 +122,30 @@ if (!function_exists('scannem_amorcer')) {
             scannem_panne(
                 'PHP ' . PHP_VERSION . ' est trop ancien pour Scannem (8.1 minimum)',
                 array(
-                    'Scannem et ses dependances de generation de QR demandent PHP 8.1 ou plus recent.',
-                    'Sous WAMP : clic gauche sur l icone de la barre des taches, <em>PHP</em> &rarr;'
-                    . ' <em>Version</em>, puis choisis 8.1 ou plus. Sous XAMPP, installe une version'
-                    . ' recente du paquet. La page se rechargera sans rien changer d autre.',
+                    'Scannem et ses dependances de generation de QR demandent PHP 8.1 ou plus'
+                    . ' recent. Rien d autre ne manque : cette page est la derniere etape.',
+
+                    '<strong>Sous WAMP</strong> — clic gauche sur l icone de la barre des taches,'
+                    . ' <em>PHP</em> &rarr; <em>Version</em>. Si 8.1 ou plus figure dans la liste,'
+                    . ' choisis-le : Apache redemarre et il suffit de recharger cette page.',
+
+                    'Ce menu ne liste que les versions <em>deja installees</em>, et WampServer n en'
+                    . ' livre souvent qu une. Si la liste s arrete a 8.0, telecharge un module PHP'
+                    . ' recent sur <code>wampserver.aviatechno.net</code> (rubrique'
+                    . ' <em>PHP versions</em>), lance l installateur, puis reviens au menu'
+                    . ' <em>PHP &rarr; Version</em> : la nouvelle version y apparait.',
+
+                    '<strong>Sous XAMPP</strong> — les versions de PHP ne se changent pas depuis'
+                    . ' le panneau. Installe un paquet XAMPP recent (PHP 8.2 ou plus) a cote de'
+                    . ' l actuel, et sers Scannem depuis celui-la.',
+
+                    '<strong>Sans toucher a Apache</strong> — decompresse un PHP recent depuis'
+                    . ' <code>windows.php.net/download</code> (version <em>Thread Safe</em>), puis'
+                    . ' lance depuis le dossier de Scannem :'
+                    . ' <code>C:\php\php.exe -S localhost:8000</code>.'
+                    . ' L application repond alors sur <code>http://localhost:8000/</code>,'
+                    . ' sans rien changer a ton installation existante.',
+
                     'PHP 8.0 n est plus suivi en securite depuis fin 2023 : la mise a jour est de'
                     . ' toute facon souhaitable.',
                 )

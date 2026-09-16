@@ -182,6 +182,14 @@ composer install
 php -S localhost:8000 -t public
 ```
 
+Depuis l'archive de déploiement — dont le contenu est déjà à plat — c'est encore
+plus direct, et ça ne touche ni à Apache ni à WampServer :
+
+```
+cd C:\wamp64\www\scannem
+C:\php\php.exe -S localhost:8000
+```
+
 Puis <http://localhost:8000/install.php>, en choisissant **SQLite** : aucune base
 à créer, aucun identifiant à saisir. L'administration est sur `/admin/`, le
 scanner sur `/scan/`.
@@ -214,6 +222,7 @@ revanche, il faudra du HTTPS.
 | Symptôme | Cause |
 |---|---|
 | Page blanche, ou HTTP 500 muet | PHP trop ancien. Depuis l'ajout de `app/amorce.php`, un message explicite le dit à la place. |
+| « PHP 8.0.x est trop ancien » | Le menu *PHP → Version* de WampServer ne liste que les versions **déjà installées**, et il n'en livre souvent qu'une. Ajouter un module PHP récent depuis `wampserver.aviatechno.net` (rubrique *PHP versions*), puis rouvrir le menu. |
 | « Les dépendances ne sont pas installées » | `composer install` n'a pas été lancé, ou `vendor/` a été oublié pendant l'envoi FTP. |
 | 404 d'Apache sur `/scan/` | Version antérieure à la gestion du préfixe : les URL partaient de la racine du site. Mettre à jour. |
 | 404 d'Apache sur `/admin/` avec la racine web sur `public/` | `mod_rewrite` désactivé. `public/.htaccess` en a besoin pour cette disposition ; l'archive de déploiement, elle, n'en dépend pas. |
