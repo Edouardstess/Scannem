@@ -135,16 +135,18 @@ if (!function_exists('scannem_amorcer')) {
                     . ' <em>PHP versions</em>), lance l installateur, puis reviens au menu'
                     . ' <em>PHP &rarr; Version</em> : la nouvelle version y apparait.',
 
+                    '<strong>Sans rien telecharger, ni toucher a Apache</strong> — WampServer'
+                    . ' installe ses propres binaires PHP. Ouvre une invite de commandes et tape'
+                    . ' <code>dir C:\wamp64\bin\php</code> : si un dossier <code>php8.1</code>'
+                    . ' ou plus recent s y trouve, il contient un <code>php.exe</code> utilisable'
+                    . ' tel quel, extensions deja configurees. Place-toi dans le dossier de'
+                    . ' Scannem et lance-le avec le serveur integre, en adaptant le numero :'
+                    . ' <code>C:\wamp64\bin\php\php8.3.0\php.exe -S localhost:8000</code>.'
+                    . ' L application repond alors sur <code>http://localhost:8000/</code>.',
+
                     '<strong>Sous XAMPP</strong> — les versions de PHP ne se changent pas depuis'
                     . ' le panneau. Installe un paquet XAMPP recent (PHP 8.2 ou plus) a cote de'
                     . ' l actuel, et sers Scannem depuis celui-la.',
-
-                    '<strong>Sans toucher a Apache</strong> — decompresse un PHP recent depuis'
-                    . ' <code>windows.php.net/download</code> (version <em>Thread Safe</em>), puis'
-                    . ' lance depuis le dossier de Scannem :'
-                    . ' <code>C:\php\php.exe -S localhost:8000</code>.'
-                    . ' L application repond alors sur <code>http://localhost:8000/</code>,'
-                    . ' sans rien changer a ton installation existante.',
 
                     'PHP 8.0 n est plus suivi en securite depuis fin 2023 : la mise a jour est de'
                     . ' toute facon souhaitable.',

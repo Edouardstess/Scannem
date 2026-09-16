@@ -183,12 +183,20 @@ php -S localhost:8000 -t public
 ```
 
 Depuis l'archive de déploiement — dont le contenu est déjà à plat — c'est encore
-plus direct, et ça ne touche ni à Apache ni à WampServer :
+plus direct, et ça ne touche ni à Apache ni à WampServer. **Inutile de
+télécharger PHP : WampServer installe les siens** dans `C:\wamp64\bin\php\`,
+avec un `php.ini` où les extensions sont déjà activées.
 
 ```
+dir C:\wamp64\bin\php
 cd C:\wamp64\www\scannem
-C:\php\php.exe -S localhost:8000
+C:\wamp64\bin\php\php8.3.0\php.exe -S localhost:8000
 ```
+
+Un PHP téléchargé à part fonctionne aussi, mais l'archive `.zip` de
+windows.php.net arrive **sans `php.ini`** : aucune extension n'est chargée, et
+`pdo_sqlite` comme `mbstring` manqueront à l'appel. Le binaire de WampServer
+évite ce piège.
 
 Puis <http://localhost:8000/install.php>, en choisissant **SQLite** : aucune base
 à créer, aucun identifiant à saisir. L'administration est sur `/admin/`, le
