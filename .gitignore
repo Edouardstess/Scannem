@@ -11,3 +11,4 @@
 
 # Genere par bin/install.php pour les hebergements mutualises
 /.htaccess
+/dist/

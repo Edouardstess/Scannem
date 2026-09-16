@@ -90,10 +90,45 @@ set_exception_handler(static function (Throwable $e): void {
     scannem_fail($e);
 });
 
-// Les erreurs PHP deviennent des exceptions, pour passer par le meme filet.
+// Pas encore installe : on repond proprement en JSON. Le scanner sait alors que
+// le serveur existe mais n'est pas pret, au lieu de recevoir une page d'erreur
+// HTML qu'il interpreterait comme une panne reseau et qui le ferait basculer a
+// tort en mode hors-ligne.
+if (!\Scannem\Config::exists()) {
+    Http::json([
+        'ok' => false,
+        'result' => 'not_installed',
+        'label' => 'NON INSTALLE',
+        'color' => 'red',
+        'admitted' => false,
+        'consumed' => false,
+        'retryable' => false,
+        'message' => 'Scannem n a pas encore ete installe sur ce serveur.',
+    ], 503);
+}
+
+/**
+ * Les erreurs PHP passent par le meme filet — mais pas n'importe lesquelles.
+ *
+ * Convertir TOUTES les erreurs en exceptions serait une faute : une simple
+ * obsolescence signalee par une dependance (endroid/qr-code en declenche sur
+ * PHP 8.4) suffirait alors a renvoyer un 500 au vigile en pleine entree. Une
+ * remarque du moteur ne doit jamais coûter une entree.
+ *
+ * Les avis et obsolescences partent donc au journal et la requete continue.
+ * Seules les vraies erreurs deviennent des exceptions.
+ */
+const SCANNEM_ERREURS_BENIGNES = E_DEPRECATED | E_USER_DEPRECATED | E_NOTICE | E_USER_NOTICE;
+
 set_error_handler(static function (int $niveau, string $message, string $fichier, int $ligne): bool {
     if ((error_reporting() & $niveau) === 0) {
         return false;
+    }
+
+    if (($niveau & SCANNEM_ERREURS_BENIGNES) !== 0) {
+        scannem_log(sprintf('avis PHP : %s @ %s:%d', $message, $fichier, $ligne));
+
+        return true;
     }
 
     throw new ErrorException($message, 0, $niveau, $fichier, $ligne);

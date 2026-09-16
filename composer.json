@@ -8,8 +8,11 @@
         "ext-pdo": "*",
         "ext-json": "*",
         "ext-hash": "*",
-        "ext-gd": "*",
         "endroid/qr-code": "^5.0"
+    },
+    "suggest": {
+        "ext-gd": "Export des QR en PNG. Sans elle, la planche d'impression fonctionne quand meme : elle utilise du SVG.",
+        "ext-redis": "Quota en memoire plutot qu'en base. Inutile en dessous de plusieurs centaines de scans par seconde."
     },
     "require-dev": {
         "phpunit/phpunit": "^10.5"
@@ -17,7 +20,10 @@
     "autoload": {
         "psr-4": {
             "Scannem\\": "src/"
-        }
+        },
+        "files": [
+            "src/bootstrap.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

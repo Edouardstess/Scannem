@@ -66,7 +66,114 @@ Trois choses donnent le pouvoir d'entrer, traitez-les comme des billets :
 
 ---
 
-## Installation
+## Mise en ligne sur un hébergement gratuit (ByetHost, InfinityFree…)
+
+Pas besoin de ligne de commande, ni de Composer, ni d'argent. Compter un
+quart d'heure.
+
+### 1. Créer la base MySQL
+
+Dans le panneau de ton hébergeur (VistaPanel chez ByetHost) : **MySQL Databases**
+→ créer une base. Note ce qu'il affiche : **serveur**, **nom de la base**,
+**utilisateur**, **mot de passe**. Chez ByetHost, le serveur n'est presque jamais
+`localhost` — c'est souvent quelque chose comme `sqlXXX.byethost.com`.
+
+### 2. Envoyer les fichiers
+
+Décompresse l'archive `scannem-*.zip` et envoie **tout son contenu** dans
+`htdocs/` par FTP (FileZilla) ou par le gestionnaire de fichiers.
+
+L'archive est faite pour ça : le contenu va directement dans `htdocs/`, sans
+sous-dossier et **sans dépendre de mod_rewrite**. Les routes `/admin/` et
+`/api/...` correspondent à de vrais fichiers, donc elles fonctionnent même si
+l'hébergeur restreint la réécriture d'URL.
+
+### 3. Installer
+
+Ouvre `https://TON-DOMAINE/install.php`, remplis le formulaire, valide.
+La page vérifie d'abord ton hébergement (PHP, MySQL, droits d'écriture) et te dit
+ce qui manque avant de créer quoi que ce soit.
+
+### 4. Supprimer l'installateur
+
+L'installateur essaie de se supprimer tout seul. **Vérifie que c'est fait** :
+`https://TON-DOMAINE/install.php` doit renvoyer une erreur 404. Sinon, supprime
+le fichier par FTP.
+
+> Tant que `install.php` existe et que le site n'est pas installé, quiconque
+> trouve l'adresse peut installer Scannem et en prendre le contrôle. La fenêtre
+> est courte si tu suis ces étapes dans l'ordre, mais elle est réelle.
+
+### 5. Lancer le contrôle de sécurité
+
+Connecte-toi à `/admin/` et ouvre l'onglet **Sécurité**. Il interroge ton site
+depuis lui-même, exactement comme le ferait un curieux, et vérifie notamment que
+`storage/config.php` ne livre rien.
+
+**Si ce contrôle affiche « DU CONTENU EST SERVI » sur `storage/config.php`,
+arrête tout.** Ton secret de signature est téléchargeable, et n'importe qui peut
+fabriquer des cartes valides. Rien d'autre n'a d'importance tant que ce n'est pas
+réglé.
+
+### 6. Mettre le secret hors de la racine web (recommandé)
+
+Si ton FTP te laisse créer un dossier **à côté** de `htdocs` (et non dedans),
+c'est la meilleure protection possible :
+
+1. crée `/scannem-donnees` au même niveau que `htdocs` ;
+2. dépose dans `htdocs/` un fichier `scannem-local.php` contenant :
+
+```php
+<?php return '/home/TON_COMPTE/scannem-donnees';
+```
+
+Le secret vit alors hors de portée du serveur web, quoi qu'il arrive au
+`.htaccess`. Ce fichier ne contient qu'un chemin : rien de sensible.
+
+### 7. HTTPS — non négociable
+
+Chez ByetHost, le HTTPS est automatique sur les sous-domaines gratuits.
+**Vérifie que `https://` fonctionne avant l'événement** : les navigateurs
+refusent l'accès à la caméra sur une connexion non chiffrée. Sans HTTPS, le
+scanner ne démarre pas du tout, et seule la saisie manuelle reste possible.
+
+### 8. Le « défibrillateur » : garder le compte en vie
+
+Les hébergeurs gratuits se réservent le droit de désactiver les comptes restés
+longtemps sans trafic. Un cron qui appelle l'adresse de santé l'évite :
+
+```
+URL   : https://TON-DOMAINE/api/health.php
+Rythme: toutes les 6 heures
+```
+
+> **Attention, et c'est important.** Chaque appel consomme ton quota de requêtes
+> et de processeur. Un cron à la minute déclencherait la **suspension de 24 h**
+> pour abus de ressources — le défibrillateur provoquerait alors exactement la
+> panne qu'il est censé empêcher. Six heures suffisent ; resserre à 15 minutes
+> la veille de l'événement si tu veux être tranquille, puis remets-le comme
+> avant.
+>
+> `api/health.php` ne touche pas à la base : c'est fait exprès, pour que le ping
+> coûte le moins possible. Ajoute `?deep=1` seulement pour un contrôle manuel.
+
+Le scanner fait aussi un pré-chauffage à son ouverture : le vigile sait que le
+serveur répond **avant** d'avoir quelqu'un devant lui, au lieu de le découvrir au
+premier scan.
+
+### Les limites de l'hébergement gratuit, sans enrobage
+
+- **Suspension CPU de 24 h** en cas de dépassement. Pour un contrôle d'entrée,
+  c'est le vrai risque : si elle tombe le soir de l'événement, tu bascules en
+  mode hors-ligne (le scanner sait le faire) mais tu perds la détection des
+  doublons entre portes.
+- **Limite d'inodes** : l'archive tient en ~200 fichiers, c'est fait pour.
+- **Aucune garantie de disponibilité.** Si l'enjeu est réel, un hébergement à
+  quelques euros par mois reste plus sûr — le code est exactement le même.
+
+---
+
+## Installation en ligne de commande (VPS, local, hébergement avec SSH)
 
 ```bash
 composer install
@@ -348,6 +455,25 @@ tests/
 ```
 
 ---
+
+## Fabriquer l'archive de déploiement
+
+```bash
+php bin/build-release.php
+```
+
+Produit `dist/scannem-AAAAMMJJ.zip` : dépendances de production installées, tests
+et documentation des bibliothèques élagués, points d'entrée réels pour `/admin/`
+et `/api/...`, `.htaccess` de protection et dossier de données vide.
+
+Le script **vérifie ensuite que l'archive élaguée fonctionne** (génération SVG,
+planche d'impression, PNG) avant de la déclarer prête, puis restaure les
+dépendances de développement pour que les tests puissent tourner.
+
+Mesuré : **~200 fichiers, 0,4 Mo** — contre 2,8 Go et 5 600 fichiers pour
+l'arborescence de développement. L'écart vient presque entièrement des
+dépendances de test et d'une police de 15,7 Mo qu'endroid embarque pour les
+libellés, dont Scannem ne se sert pas.
 
 ## Exploitation
 

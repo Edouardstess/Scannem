@@ -87,10 +87,15 @@ if ($handle !== false) {
 }
 
 if (isset($args['png'])) {
-    $dir = \Scannem\Config::storagePath('qr/' . $slug);
-    echo "Ecriture des PNG...\n";
-    $renderer->writeBatch($batch['cards'], $dir);
-    echo "PNG : $dir\n";
+    if (!QrRenderer::pngDisponible()) {
+        echo "\nPNG ignores : l'extension GD est absente de cette installation.\n";
+        echo "La planche d'impression ci-dessus suffit, elle est en SVG.\n";
+    } else {
+        $dir = \Scannem\Config::storagePath('qr/' . $slug);
+        echo "Ecriture des PNG...\n";
+        $renderer->writeBatch($batch['cards'], $dir);
+        echo "PNG : $dir\n";
+    }
 }
 
 echo <<<TXT

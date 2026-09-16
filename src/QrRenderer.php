@@ -38,8 +38,27 @@ final class QrRenderer
         );
     }
 
+    /**
+     * L'export PNG est-il possible sur cet hebergement ?
+     *
+     * L'extension GD manque sur certains mutualises gratuits. Ce n'est pas
+     * bloquant : la planche d'impression, qui est le livrable qui compte, est
+     * rendue en SVG et n'en depend pas.
+     */
+    public static function pngDisponible(): bool
+    {
+        return extension_loaded('gd') && function_exists('imagecreatetruecolor');
+    }
+
     public function png(string $payload): string
     {
+        if (!self::pngDisponible()) {
+            throw new RuntimeException(
+                "L'extension GD est absente de cet hebergement, l'export PNG est indisponible.\n"
+                . "Utilise la planche d'impression, qui est en SVG et ne demande rien de plus."
+            );
+        }
+
         return (new PngWriter())->write($this->qr($payload))->getString();
     }
 

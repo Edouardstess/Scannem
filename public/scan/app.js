@@ -122,7 +122,7 @@
     msg.className = 'msg';
     msg.textContent = 'Enrolement en cours...';
 
-    appel('/api/enroll', { method: 'POST', body: { code: code } }).then(function (r) {
+    appel('/api/enroll.php', { method: 'POST', body: { code: code } }).then(function (r) {
       if (!r.ok || !r.data.ok) {
         msg.className = 'msg err';
         msg.textContent = r.data.message || 'Enrolement refuse.';
@@ -268,7 +268,7 @@
   }
 
   function enLigne(payload) {
-    appel('/api/redeem', {
+    appel('/api/redeem.php', {
       method: 'POST',
       body: { payload: payload, client_at: new Date().toISOString() }
     }).then(function (r) {
@@ -431,7 +431,7 @@
     // On envoie une copie : si la requete echoue, la file d'origine reste intacte.
     var lot = etat.file.slice(0, 2000);
 
-    return appel('/api/sync', {
+    return appel('/api/sync.php', {
       method: 'POST',
       body: { queue: lot },
       timeout: 25000
@@ -473,7 +473,7 @@
     msg.className = 'msg';
     msg.textContent = 'Telechargement du pack...';
 
-    appel('/api/pack', { timeout: 30000 }).then(function (r) {
+    appel('/api/pack.php', { timeout: 30000 }).then(function (r) {
       if (!r.ok || !r.data.ok) {
         msg.className = 'msg err';
         msg.textContent = r.data.message || 'Telechargement refuse.';
@@ -643,6 +643,36 @@
     location.reload();
   }
 
+  /**
+   * Pre-chauffage : verifie que le serveur repond, avant le premier invite.
+   *
+   * Sur un hebergement mutualise, la premiere requete apres une longue inactivite
+   * est la plus lente (caches froids, connexion base a rouvrir). Autant la payer
+   * pendant que le vigile installe son poste plutot que devant quelqu'un qui
+   * attend. Et si le serveur est en panne, il le sait tout de suite.
+   *
+   * Appel volontairement leger : /api/health sans ?deep=1 ne touche pas la base.
+   */
+  function prechauffer() {
+    if (!navigator.onLine) {
+      majReseau(false);
+      return;
+    }
+
+    appel('/api/health.php', { timeout: 8000 }).then(function (r) {
+      var ok = r.ok && r.data && r.data.ok === true;
+      majReseau(ok);
+
+      if (!ok) {
+        $('hint').textContent = 'Le serveur ne repond pas normalement. Previens l organisateur.';
+      }
+    }).catch(function () {
+      // Injoignable : on le dit maintenant, pas au premier scan.
+      majReseau(false);
+      $('hint').textContent = 'Serveur injoignable. Le mode hors-ligne prendra le relais.';
+    });
+  }
+
   function demarrer() {
     $('enroll').classList.add('hidden');
     $('main').classList.remove('hidden');
@@ -651,6 +681,7 @@
 
     majMenu();
     majReseau();
+    prechauffer();
     demarrerCamera();
 
     // Une file en attente au demarrage : le reseau est peut-etre revenu.
@@ -704,6 +735,7 @@
 
     window.addEventListener('online', function () {
       majReseau(true);
+      prechauffer();
       synchroniser(true);
     });
 

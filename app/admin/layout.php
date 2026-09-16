@@ -18,6 +18,7 @@ $nav = [
     'scans' => 'Journal',
     'disputes' => 'Litiges',
     'devices' => 'Appareils',
+    'securite' => 'Securite',
 ];
 
 Http::securityHeaders();

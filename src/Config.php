@@ -82,9 +82,49 @@ final class Config
         return $relative === '' ? $root : $root . '/' . ltrim($relative, '/');
     }
 
+    /**
+     * Emplacement du dossier de donnees, secret de signature compris.
+     *
+     * Deplacable hors de la racine web, ce qui est la SEULE protection reellement
+     * solide sur un hebergement mutualise gratuit : la racine y est imposee
+     * (souvent htdocs/) et on ne peut pas la faire pointer sur public/. Tout se
+     * retrouve donc servi par le serveur web, .htaccess compris — et un .htaccess
+     * ignore ou mal applique rendrait le secret telechargeable.
+     *
+     * Deux facons de le deplacer, la constante l'emportant sur la variable :
+     *
+     *   define('SCANNEM_STORAGE_PATH', '/home/compte/scannem-donnees');
+     *   putenv('SCANNEM_STORAGE_PATH=/home/compte/scannem-donnees');
+     */
     public static function storagePath(string $relative = ''): string
     {
-        return self::rootPath('storage' . ($relative === '' ? '' : '/' . ltrim($relative, '/')));
+        $base = self::storageBase();
+
+        return $relative === '' ? $base : $base . '/' . ltrim($relative, '/');
+    }
+
+    public static function storageBase(): string
+    {
+        if (defined('SCANNEM_STORAGE_PATH')) {
+            return rtrim((string) constant('SCANNEM_STORAGE_PATH'), '/');
+        }
+
+        $env = getenv('SCANNEM_STORAGE_PATH');
+
+        if (is_string($env) && $env !== '') {
+            return rtrim($env, '/');
+        }
+
+        return self::rootPath('storage');
+    }
+
+    /** Le dossier de donnees est-il a l'interieur de l'arborescence servie ? */
+    public static function storageIsInsideProject(): bool
+    {
+        $base = realpath(self::storageBase()) ?: self::storageBase();
+        $root = realpath(self::rootPath()) ?: self::rootPath();
+
+        return str_starts_with($base, $root);
     }
 
     public static function configFile(): string

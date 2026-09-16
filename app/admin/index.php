@@ -18,6 +18,26 @@ use Scannem\Session;
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
+// Pas encore installe : on oriente vers l'installateur plutot que de laisser
+// remonter une exception, qui donnerait une page 500 vide et, sur certains
+// hebergements, une trace d'execution revelant les chemins du serveur.
+if (!Config::exists()) {
+    if (is_file(Config::rootPath('install.php')) || is_file(Config::rootPath('public/install.php'))) {
+        header('Location: /install.php');
+        exit;
+    }
+
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    exit(
+        '<!DOCTYPE html><meta charset="utf-8"><title>Scannem</title>'
+        . '<p style="font:16px system-ui;padding:40px;max-width:36em">'
+        . 'Scannem n\'est pas installe, et le fichier <code>install.php</code> est absent.'
+        . '<br><br>Renvoie <code>install.php</code> par FTP, ouvre-le dans le navigateur,'
+        . ' puis supprime-le a nouveau.</p>'
+    );
+}
+
 $app = App::boot();
 $config = $app->config();
 
@@ -264,6 +284,10 @@ switch ($page) {
 
     case 'devices':
         require __DIR__ . '/pages/devices.php';
+        break;
+
+    case 'securite':
+        require __DIR__ . '/pages/securite.php';
         break;
 
     case 'lots':
