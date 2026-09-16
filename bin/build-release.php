@@ -192,6 +192,12 @@ foreach (scandir($racine . '/public') ?: [] as $entree) {
         continue;
     }
 
+    // public/.htaccess decrit la disposition « racine web sur public/ ». Ici la
+    // disposition est l'autre : un .htaccess adapte est ecrit plus bas.
+    if ($entree === '.htaccess') {
+        continue;
+    }
+
     copier(
         $racine . '/public/' . $entree,
         $travail . '/' . $entree,
@@ -213,18 +219,27 @@ foreach (scandir($racine . '/public') ?: [] as $entree) {
  */
 mkdir($travail . '/api', 0755, true);
 
+/**
+ * Le « 1 » passe a scannem_amorcer est la profondeur du relais sous la racine
+ * servie. C'est ce qui permet a Scannem de savoir sous quel prefixe il est
+ * installe : htdocs/ (prefixe vide) ou htdocs/scannem/ (prefixe /scannem). Sans
+ * lui, toutes les URL produites repartiraient de la racine du site et le
+ * scanner appellerait /api/redeem.php au lieu de /scannem/api/redeem.php.
+ */
+$relais = static fn (string $cible): string => "<?php\n\n"
+    . "// Point d'entree reel : evite de dependre d'une reecriture .htaccess.\n"
+    . "// Le 1 est la profondeur de ce fichier sous la racine servie ; il permet a\n"
+    . "// Scannem de fonctionner aussi bien a la racine que dans un sous-dossier.\n"
+    . "require dirname(__DIR__) . '/app/amorce.php';\n"
+    . "scannem_amorcer(dirname(__DIR__), 1);\n"
+    . "require dirname(__DIR__) . '/app/" . $cible . "';\n";
+
 foreach (['redeem', 'verify', 'enroll', 'pack', 'sync', 'health'] as $route) {
-    file_put_contents(
-        $travail . '/api/' . $route . '.php',
-        "<?php\n\n// Point d'entree reel : evite de dependre d'une reecriture .htaccess.\nrequire __DIR__ . '/../app/api/" . $route . ".php';\n"
-    );
+    file_put_contents($travail . '/api/' . $route . '.php', $relais('api/' . $route . '.php'));
 }
 
 mkdir($travail . '/admin', 0755, true);
-file_put_contents(
-    $travail . '/admin/index.php',
-    "<?php\n\n// Point d'entree reel : evite de dependre d'une reecriture .htaccess.\nrequire __DIR__ . '/../app/admin/index.php';\n"
-);
+file_put_contents($travail . '/admin/index.php', $relais('admin/index.php'));
 
 // Dossier de donnees, vide mais protege des le premier octet.
 mkdir($travail . '/storage', 0700, true);
@@ -244,7 +259,8 @@ file_put_contents($travail . '/.htaccess', <<<'HTACCESS'
 # Scannem — protection de l'arborescence.
 #
 # Le contenu de public/ est deja a la racine : aucune reecriture n'est requise,
-# le site fonctionne meme si mod_rewrite est indisponible.
+# le site fonctionne meme si mod_rewrite est indisponible. Ce dossier peut etre
+# htdocs/ ou un sous-dossier de htdocs/ : Scannem deduit son prefixe tout seul.
 #
 # Ces regles refusent l'acces au code et surtout aux donnees. Le fichier
 # storage/config.php contient le secret qui signe les QR : il ne doit jamais
@@ -257,22 +273,40 @@ file_put_contents($travail . '/.htaccess', <<<'HTACCESS'
 # Empeche de lister le contenu des dossiers.
 Options -Indexes
 
+DirectoryIndex index.php index.html
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
     RewriteRule ^(storage|src|app|vendor|bin|tests)/ - [F,L]
+
+    # Confort, jamais une obligation : /api/redeem sans extension et les liens
+    # courts /s/CODE passent par le routeur. Tout ce dont le scanner a besoin
+    # existe deja sous forme de fichier, donc l'absence de mod_rewrite ne casse
+    # rien. Cible relative et pas de RewriteBase : la regle vaut telle quelle
+    # dans un sous-dossier.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
 </IfModule>
 HTACCESS);
 
 file_put_contents($travail . '/LISEZ-MOI.txt', <<<'TXT'
-SCANNEM — INSTALLATION SUR HEBERGEMENT MUTUALISE
-================================================
+SCANNEM — INSTALLATION
+======================
+
+SUR UN HEBERGEMENT
+------------------
 
 1. Cree une base MySQL dans le panneau de ton hebergeur, et note les
    identifiants qu'il affiche (serveur, nom, utilisateur, mot de passe).
 
 2. Envoie TOUT le contenu de ce dossier dans htdocs/ par FTP.
+   Un sous-dossier convient aussi : htdocs/scannem/ fonctionne sans rien
+   changer, Scannem s'adapte au prefixe.
 
 3. Ouvre dans ton navigateur :  https://TON-DOMAINE/install.php
+   (ou https://TON-DOMAINE/scannem/install.php si tu as choisi un sous-dossier)
    Remplis le formulaire. C'est tout.
 
 4. SUPPRIME install.php juste apres. Tant qu'il est la, c'est une porte ouverte.
@@ -282,6 +316,28 @@ SCANNEM — INSTALLATION SUR HEBERGEMENT MUTUALISE
 
 6. Le scanner est sur https://TON-DOMAINE/scan/
    HTTPS OBLIGATOIRE, sinon le navigateur refuse l'acces a la camera.
+
+EN LOCAL (WAMP, XAMPP, MAMP)
+----------------------------
+
+Meme chose, avec trois differences :
+
+  - PHP 8.1 AU MINIMUM. WAMP et XAMPP sont souvent livres avec une version
+    plus ancienne. Sous WAMP : clic gauche sur l'icone de la barre des
+    taches, PHP > Version. Si PHP est trop ancien, Scannem te le dit en
+    toutes lettres au lieu d'afficher une page blanche.
+
+  - Depose le contenu de ce dossier dans www\scannem\ (WAMP) ou
+    htdocs\scannem\ (XAMPP), puis ouvre :
+
+        http://localhost/scannem/install.php
+
+  - Choisis SQLite dans le formulaire : aucune base a creer, aucun
+    identifiant a saisir. C'est preselectionne sur localhost.
+
+La camera fonctionne sur http://localhost, que les navigateurs considerent
+comme un contexte sur. Depuis un telephone qui pointe sur l'IP de ton PC,
+en revanche, il faudra du HTTPS.
 
 A SAUVEGARDER hors du serveur : storage/config.php
 Sans ce fichier, aucune carte deja imprimee ne peut plus etre verifiee.

@@ -17,7 +17,7 @@ $batch = $cards->batch($id);
 
 if ($batch === null) {
     $title = 'Lot introuvable';
-    echo '<h1>Lot introuvable</h1><p class="sub"><a href="/admin/?p=lots">Retour aux lots</a></p>';
+    echo '<h1>Lot introuvable</h1><p class="sub"><a href="' . $base . '/admin/?p=lots">Retour aux lots</a></p>';
 
     return;
 }
@@ -40,7 +40,7 @@ $pages = max(1, (int) ceil($total / $perPage));
 $page = min($page, $pages);
 $slice = array_slice($rows, ($page - 1) * $perPage, $perPage);
 
-$back = '/admin/?p=batch&id=' . $id;
+$back = $base . '/admin/?p=batch&id=' . $id;
 
 echo $flashBlock;
 ?>
@@ -58,8 +58,8 @@ echo $flashBlock;
     <div class="stat"><div class="n" style="color:var(--red)"><?= $stats['revoked'] ?></div><div class="k">annulees</div></div>
   </div>
   <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
-    <a class="btn" href="/admin/?p=sheet&amp;id=<?= $id ?>" target="_blank">Planche d'impression</a>
-    <a class="btn" href="/admin/?p=csv&amp;id=<?= $id ?>">Exporter en CSV</a>
+    <a class="btn" href="<?= $base ?>/admin/?p=sheet&amp;id=<?= $id ?>" target="_blank">Planche d'impression</a>
+    <a class="btn" href="<?= $base ?>/admin/?p=csv&amp;id=<?= $id ?>">Exporter en CSV</a>
   </div>
   <p class="note">
     La planche et le CSV contiennent les codes complets : ils valent les cartes elles-memes.
@@ -73,7 +73,7 @@ echo $flashBlock;
   <div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap">
     <?php foreach (['all' => 'Toutes', 'active' => 'Non utilisees', 'used' => 'Entrees', 'revoked' => 'Annulees'] as $key => $label): ?>
       <a class="btn" style="<?= $filter === $key ? 'border-color:var(--accent);color:var(--accent)' : '' ?>"
-         href="/admin/?p=batch&amp;id=<?= $id ?>&amp;f=<?= $key ?>"><?= $label ?></a>
+         href="<?= $base ?>/admin/?p=batch&amp;id=<?= $id ?>&amp;f=<?= $key ?>"><?= $label ?></a>
     <?php endforeach; ?>
   </div>
 
@@ -97,7 +97,7 @@ echo $flashBlock;
         <td style="color:var(--muted)"><?= Http::escape($r['used_at'] !== null ? str_replace(['T', 'Z'], [' ', ''], (string) $r['used_at']) : '—') ?></td>
         <td style="text-align:right">
           <?php if ($r['status'] === 'active'): ?>
-            <form method="post" action="/admin/?p=batch&amp;id=<?= $id ?>" style="display:inline"
+            <form method="post" action="<?= $base ?>/admin/?p=batch&amp;id=<?= $id ?>" style="display:inline"
                   onsubmit="return confirm('Annuler cette carte ? Elle sera refusee a l entree.')">
               <?= $csrf ?>
               <input type="hidden" name="action" value="revoke">
@@ -106,7 +106,7 @@ echo $flashBlock;
               <button type="submit" class="danger">Annuler</button>
             </form>
           <?php elseif ($r['status'] === 'revoked'): ?>
-            <form method="post" action="/admin/?p=batch&amp;id=<?= $id ?>" style="display:inline">
+            <form method="post" action="<?= $base ?>/admin/?p=batch&amp;id=<?= $id ?>" style="display:inline">
               <?= $csrf ?>
               <input type="hidden" name="action" value="restore">
               <input type="hidden" name="uid" value="<?= Http::escape($uid) ?>">
@@ -126,7 +126,7 @@ echo $flashBlock;
     <div style="margin-top:16px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <?php for ($i = 1; $i <= min($pages, 30); $i++): ?>
         <a class="btn" style="<?= $i === $page ? 'border-color:var(--accent);color:var(--accent)' : '' ?>;padding:6px 11px"
-           href="/admin/?p=batch&amp;id=<?= $id ?>&amp;f=<?= $filter ?>&amp;page=<?= $i ?>"><?= $i ?></a>
+           href="<?= $base ?>/admin/?p=batch&amp;id=<?= $id ?>&amp;f=<?= $filter ?>&amp;page=<?= $i ?>"><?= $i ?></a>
       <?php endfor; ?>
       <span style="color:var(--muted);font-size:13px"><?= $total ?> cartes</span>
     </div>
@@ -134,4 +134,4 @@ echo $flashBlock;
   <?php endif; ?>
 </div>
 
-<p><a href="/admin/?p=lots">&larr; Tous les lots</a></p>
+<p><a href="<?= $base ?>/admin/?p=lots">&larr; Tous les lots</a></p>

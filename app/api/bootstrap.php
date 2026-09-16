@@ -19,7 +19,10 @@ use Scannem\Db;
 use Scannem\Http;
 use Scannem\ScanResult;
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+// Version de PHP, dependances, autoloader. Une panne a ce stade doit sortir en
+// JSON comme le reste : scannem_amorcer s'en charge.
+require dirname(__DIR__) . '/amorce.php';
+scannem_amorcer(dirname(__DIR__, 2));
 
 // Les erreurs partent dans le journal du serveur, jamais dans la reponse.
 ini_set('display_errors', '0');

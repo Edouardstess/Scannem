@@ -9,15 +9,23 @@
  * Toutes les requetes /api/ passent directement au reseau.
  */
 
-var CACHE = 'scannem-scan-v1';
+var CACHE = 'scannem-scan-v2';
+
+/*
+ * Prefixe d'installation, deduit de l'emplacement de ce fichier : il est servi
+ * depuis <prefixe>/scan/sw.js. Une liste de chemins ecrits en dur ne marcherait
+ * qu'a la racine du site, et l'installation echouerait en silence dans un
+ * sous-dossier — donc pas de demarrage hors reseau, sans le moindre message.
+ */
+var BASE = self.location.pathname.replace(/\/scan\/sw\.js$/, '');
 
 var COQUILLE = [
-  '/scan/',
-  '/scan/index.html',
-  '/scan/style.css',
-  '/scan/app.js',
-  '/scan/vendor/jsQR.js',
-  '/scan/manifest.json'
+  BASE + '/scan/',
+  BASE + '/scan/index.html',
+  BASE + '/scan/style.css',
+  BASE + '/scan/app.js',
+  BASE + '/scan/vendor/jsQR.js',
+  BASE + '/scan/manifest.json'
 ];
 
 self.addEventListener('install', function (e) {
@@ -42,7 +50,7 @@ self.addEventListener('fetch', function (e) {
   var url = new URL(e.request.url);
 
   // L'API n'est jamais mise en cache, ni servie depuis le cache.
-  if (url.pathname.indexOf('/api/') === 0) {
+  if (url.pathname.indexOf(BASE + '/api/') === 0) {
     return;
   }
 
@@ -60,7 +68,7 @@ self.addEventListener('fetch', function (e) {
       return reponse;
     }).catch(function () {
       return caches.match(e.request).then(function (mise) {
-        return mise || caches.match('/scan/index.html');
+        return mise || caches.match(BASE + '/scan/index.html');
       });
     })
   );

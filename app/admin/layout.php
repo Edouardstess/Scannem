@@ -11,6 +11,7 @@ use Scannem\Session;
  * @var string $title
  * @var string $content
  * @var string $active
+ * @var string $base   prefixe d'installation ('' a la racine, '/scannem' sinon)
  */
 
 $nav = [
@@ -29,7 +30,7 @@ Http::securityHeaders();
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= Http::escape($title) ?> &mdash; Scannem</title>
-<link rel="icon" href="/scan/icon.svg" type="image/svg+xml">
+<link rel="icon" href="<?= $base ?>/scan/icon.svg" type="image/svg+xml">
 <style>
   :root {
     --bg: #f6f7f9;
@@ -141,12 +142,12 @@ Http::securityHeaders();
   <?php if (Session::isLogged()): ?>
   <nav>
     <?php foreach ($nav as $key => $label): ?>
-      <a href="/admin/?p=<?= $key ?>" class="<?= $active === $key ? 'on' : '' ?>"><?= Http::escape($label) ?></a>
+      <a href="<?= $base ?>/admin/?p=<?= $key ?>" class="<?= $active === $key ? 'on' : '' ?>"><?= Http::escape($label) ?></a>
     <?php endforeach; ?>
   </nav>
   <div class="who">
     <span><?= Http::escape(Session::username()) ?></span>
-    <form method="post" action="/admin/?p=logout">
+    <form method="post" action="<?= $base ?>/admin/?p=logout">
       <?= Session::csrfField() ?>
       <button type="submit">Deconnexion</button>
     </form>

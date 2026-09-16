@@ -31,7 +31,8 @@ echo $flashBlock;
   <div class="code-box"><?= Http::escape($fresh['code']) ?></div>
   <p class="note">
     Ce code ne sera plus affiche : seule son empreinte est conservee.
-    Sur le telephone, ouvre <code>/scan/</code> et saisis-le. Il est valable
+    Sur le telephone, ouvre <code><?= Http::escape($base) ?>/scan/</code> et
+    saisis-le. Il est valable
     15 minutes et pour un seul appareil.
   </p>
 </div>
@@ -39,7 +40,7 @@ echo $flashBlock;
 
 <div class="panel">
   <h2 style="margin-top:0">Enroler un nouvel appareil</h2>
-  <form method="post" action="/admin/?p=devices">
+  <form method="post" action="<?= $base ?>/admin/?p=devices">
     <?= $csrf ?>
     <input type="hidden" name="action" value="enroll_code">
     <div class="row">
@@ -92,7 +93,7 @@ echo $flashBlock;
           <?= Http::escape($d['last_seen_at'] !== null ? str_replace(['T', 'Z'], [' ', ''], (string) $d['last_seen_at']) : 'jamais') ?>
         </td>
         <td style="text-align:right">
-          <form method="post" action="/admin/?p=devices" style="display:inline">
+          <form method="post" action="<?= $base ?>/admin/?p=devices" style="display:inline">
             <?= $csrf ?>
             <input type="hidden" name="action" value="device_toggle">
             <input type="hidden" name="id" value="<?= (int) $d['id'] ?>">

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Scannem\Url;
+
 /**
  * Point d'entree unique.
  *
@@ -9,13 +11,6 @@ declare(strict_types=1);
  * n'appelle ce script que pour les chemins sans fichier correspondant. En
  * production, la racine web pointe sur ce dossier et tout passe par ici.
  */
-
-$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-$path = is_string($path) ? rtrim($path, '/') : '';
-
-if ($path === '') {
-    $path = '/';
-}
 
 /**
  * Trouve la racine du projet en remontant jusqu'a vendor/autoload.php.
@@ -28,13 +23,35 @@ if ($path === '') {
  *     contenu de public/ et les dossiers du projet cote a cote.
  *
  * Chercher vendor/ plutot que supposer un niveau de profondeur evite de dependre
- * de mod_rewrite, que certains hebergeurs gratuits restreignent — et une
- * reecriture absente laisserait le site inaccessible sans message clair.
+ * de mod_rewrite, que certains hebergeurs restreignent — et une reecriture
+ * absente laisserait le site inaccessible sans message clair.
  */
 $root = __DIR__;
 
 while (!is_file($root . '/vendor/autoload.php') && dirname($root) !== $root) {
     $root = dirname($root);
+}
+
+// Version de PHP, dependances, prefixe d'installation. Le 0 dit que ce fichier
+// est pose a la racine servie : le prefixe est le dossier de ce script.
+require $root . '/app/amorce.php';
+scannem_amorcer($root, 0);
+
+/**
+ * Chemin demande, ramene a un chemin interne.
+ *
+ * Url::strip retire le prefixe d'installation : dans htdocs/scannem/, une visite
+ * sur /scannem/admin devient /admin. Sans ca, aucune route ne correspondrait et
+ * l'application repondrait sa propre page « introuvable » pour sa page d'accueil
+ * — exactement le symptome d'une installation en sous-dossier.
+ */
+$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$path = Url::strip(is_string($path) ? rtrim($path, '/') : '');
+
+// Appel direct du routeur (/index.php), au lieu du dossier. Rien ne l'interdit
+// et un navigateur y arrive vite : c'est la meme page d'accueil.
+if ($path === '' || $path === '/index.php') {
+    $path = '/';
 }
 
 // --- API ---------------------------------------------------------------------
@@ -69,9 +86,17 @@ if ($path === '/admin' || str_starts_with($path, '/admin')) {
     exit;
 }
 
+// --- Installateur ------------------------------------------------------------
+// Sert install.php meme quand la racine web pointe sur public/ et que le fichier
+// est demande sans son dossier. Le relais garde le prefixe d'installation.
+if ($path === '/install.php' && is_file(__DIR__ . '/install.php')) {
+    require __DIR__ . '/install.php';
+    exit;
+}
+
 // --- Scanner -----------------------------------------------------------------
 if ($path === '/scan' || $path === '/') {
-    header('Location: /scan/');
+    header('Location: ' . Url::to('/scan/'));
     exit;
 }
 
@@ -79,7 +104,7 @@ if ($path === '/scan' || $path === '/') {
 // Permet d'imprimer une URL plutot que le code brut si tu le souhaites un jour :
 // le scanner reconnait les deux formes (voir Token::normalize).
 if (str_starts_with($path, '/s/')) {
-    header('Location: /scan/?code=' . rawurlencode(substr($path, 3)));
+    header('Location: ' . Url::to('/scan/?code=' . rawurlencode(substr($path, 3))));
     exit;
 }
 
@@ -87,4 +112,5 @@ http_response_code(404);
 header('Content-Type: text/html; charset=utf-8');
 echo '<!DOCTYPE html><meta charset="utf-8"><title>Introuvable</title>'
     . '<p style="font:16px system-ui;padding:40px">Page introuvable. '
-    . '<a href="/scan/">Scanner</a> &middot; <a href="/admin/">Administration</a></p>';
+    . '<a href="' . Url::to('/scan/') . '">Scanner</a> &middot; '
+    . '<a href="' . Url::to('/admin/') . '">Administration</a></p>';

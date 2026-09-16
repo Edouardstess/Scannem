@@ -15,15 +15,29 @@ use Scannem\Http;
 use Scannem\QrRenderer;
 use Scannem\ScanResult;
 use Scannem\Session;
+use Scannem\Url;
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+// Version de PHP, dependances, autoloader. Le prefixe d'installation, lui, a
+// deja ete fixe par le point d'entree (index.php ou le relais admin/index.php),
+// qui sont les seuls a savoir a quelle profondeur ils se trouvent.
+require dirname(__DIR__) . '/amorce.php';
+scannem_amorcer(dirname(__DIR__, 2));
+
+/**
+ * Prefixe d'installation, pour les gabarits.
+ *
+ * Les vues l'intercalent devant chaque lien : href="<?= $base ?>/admin/?p=lots".
+ * Sans lui, une installation dans htdocs/scannem/ renverrait sur /admin/, que le
+ * serveur ne trouve pas.
+ */
+$base = Url::base();
 
 // Pas encore installe : on oriente vers l'installateur plutot que de laisser
 // remonter une exception, qui donnerait une page 500 vide et, sur certains
 // hebergements, une trace d'execution revelant les chemins du serveur.
 if (!Config::exists()) {
     if (is_file(Config::rootPath('install.php')) || is_file(Config::rootPath('public/install.php'))) {
-        header('Location: /install.php');
+        header('Location: ' . Url::to('/install.php'));
         exit;
     }
 
@@ -87,7 +101,7 @@ if ($page === 'login') {
 
             if ($admin !== null) {
                 Session::login($admin);
-                redirect('/admin/?p=lots');
+                redirect(Url::to('/admin/?p=lots'));
             }
 
             // Message unique : ne pas dire si c'est l'identifiant ou le mot de passe.
@@ -103,7 +117,7 @@ if ($page === 'login') {
   <h1>Connexion</h1>
   <p class="sub">Espace organisateur</p>
   $errBlock
-  <form method="post" action="/admin/?p=login">
+  <form method="post" action="$base/admin/?p=login">
     $csrf
     <div class="field">
       <label for="u">Nom d'utilisateur</label>
@@ -129,7 +143,7 @@ if ($page === 'logout') {
         Session::requireCsrf();
     }
     Session::logout();
-    redirect('/admin/?p=login');
+    redirect(Url::to('/admin/?p=login'));
 }
 
 Session::requireLogin();
@@ -157,13 +171,13 @@ if ($isPost) {
             try {
                 $batch = $cards->createBatch($name, $qty, $date);
                 flash('ok', "Lot #{$batch['batch_id']} cree : $qty cartes.");
-                redirect('/admin/?p=batch&id=' . $batch['batch_id']);
+                redirect(Url::to('/admin/?p=batch&id=' . $batch['batch_id']));
             } catch (Throwable $e) {
                 flash('err', 'Creation impossible : ' . $e->getMessage());
             }
         }
 
-        redirect('/admin/?p=lots');
+        redirect(Url::to('/admin/?p=lots'));
     }
 
     if ($action === 'revoke') {
@@ -181,7 +195,7 @@ if ($isPost) {
             );
         }
 
-        redirect((string) ($_POST['back'] ?? '/admin/?p=lots'));
+        redirect((string) ($_POST['back'] ?? Url::to('/admin/?p=lots')));
     }
 
     if ($action === 'restore') {
@@ -191,7 +205,7 @@ if ($isPost) {
             $cards->findByUid($uid) === null ? "Carte $uid introuvable." : "Carte $uid remise en circulation."
         );
 
-        redirect((string) ($_POST['back'] ?? '/admin/?p=lots'));
+        redirect((string) ($_POST['back'] ?? Url::to('/admin/?p=lots')));
     }
 
     if ($action === 'enroll_code') {
@@ -200,7 +214,7 @@ if ($isPost) {
 
         // Affiche une seule fois : seul le hachage est conserve.
         $_SESSION['fresh_code'] = ['code' => $code, 'label' => $label !== '' ? $label : 'Appareil'];
-        redirect('/admin/?p=devices');
+        redirect(Url::to('/admin/?p=devices'));
     }
 
     if ($action === 'device_toggle') {
@@ -210,10 +224,10 @@ if ($isPost) {
         $on ? $auth->reactivateDevice($id) : $auth->deactivateDevice($id);
         flash('ok', $on ? 'Appareil reactive.' : 'Appareil desactive : ses scans seront refuses.');
 
-        redirect('/admin/?p=devices');
+        redirect(Url::to('/admin/?p=devices'));
     }
 
-    redirect('/admin/?p=lots');
+    redirect(Url::to('/admin/?p=lots'));
 }
 
 // --------------------------------------------------------------- Exports bruts

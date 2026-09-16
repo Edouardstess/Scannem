@@ -88,7 +88,7 @@ echo $flashBlock;
   <div style="margin-top:16px;display:flex;gap:8px">
     <?php foreach ([150, 400, 1000] as $n): ?>
       <a class="btn" style="<?= $limit === $n ? 'border-color:var(--accent);color:var(--accent)' : '' ?>"
-         href="/admin/?p=scans&amp;n=<?= $n ?>">Voir <?= $n ?></a>
+         href="<?= $base ?>/admin/?p=scans&amp;n=<?= $n ?>">Voir <?= $n ?></a>
     <?php endforeach; ?>
   </div>
 <?php endif; ?>

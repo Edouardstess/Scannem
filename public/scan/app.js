@@ -23,6 +23,17 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
+  /*
+   * Prefixe d'installation.
+   *
+   * Le scanner vit toujours sous <prefixe>/scan/ : ce qui precede dans l'URL est
+   * le prefixe — vide quand Scannem occupe la racine du site, '/scannem' quand il
+   * est dans un sous-dossier. Sans ca, un appel ecrit en dur vers /api/redeem.php
+   * sortirait du dossier de l'application et tomberait sur la page 404 du
+   * serveur, que le scanner prendrait pour une panne reseau.
+   */
+  var BASE = location.pathname.replace(/\/scan(\/[^\/]*)?$/, '');
+
   var etat = {
     jeton: null,
     label: '',
@@ -88,7 +99,7 @@
     // faire patienter la file d'attente devant un ecran qui tourne.
     var minuteur = setTimeout(function () { controleur.abort(); }, options.timeout || 6000);
 
-    return fetch(route, {
+    return fetch(BASE + route, {
       method: options.method || 'GET',
       headers: entetes,
       body: options.body ? JSON.stringify(options.body) : undefined,
@@ -749,7 +760,7 @@
     });
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/scan/sw.js').catch(function () {
+      navigator.serviceWorker.register(BASE + '/scan/sw.js').catch(function () {
         // Sans service worker, l'app ne demarre pas hors-ligne mais fonctionne.
       });
     }

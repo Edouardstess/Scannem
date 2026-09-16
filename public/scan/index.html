@@ -4,11 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#101216">
+<!--
+  Liens relatifs, volontairement : cette page est servie depuis <prefixe>/scan/,
+  donc « style.css » designe le bon fichier que Scannem occupe la racine du site
+  ou un sous-dossier. Ecrits en /scan/style.css, ils sortiraient du dossier de
+  l'application des qu'elle n'est pas a la racine.
+-->
 <title>Scannem &mdash; Controle</title>
-<link rel="icon" href="/scan/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/scan/icon.svg">
-<link rel="manifest" href="/scan/manifest.json">
-<link rel="stylesheet" href="/scan/style.css">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -97,7 +103,7 @@
 
 </section>
 
-<script src="/scan/vendor/jsQR.js"></script>
-<script src="/scan/app.js"></script>
+<script src="vendor/jsQR.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

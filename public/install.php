@@ -25,6 +25,7 @@ use Scannem\Config;
 use Scannem\Db;
 use Scannem\Http;
 use Scannem\QrRenderer;
+use Scannem\Url;
 
 // Racine trouvee en remontant : l'installateur doit fonctionner aussi bien
 // depuis public/ que depose directement dans le htdocs/ d'un mutualise.
@@ -34,7 +35,13 @@ while (!is_file($racineProjet . '/vendor/autoload.php') && dirname($racineProjet
     $racineProjet = dirname($racineProjet);
 }
 
-require $racineProjet . '/vendor/autoload.php';
+// Le 0 dit que ce fichier est pose a la racine servie : le prefixe
+// d'installation est le dossier de ce script, '' a la racine du site,
+// '/scannem' dans un sous-dossier.
+require $racineProjet . '/app/amorce.php';
+scannem_amorcer($racineProjet, 0);
+
+$base = Url::base();
 
 Http::securityHeaders();
 
@@ -54,9 +61,20 @@ function diagnostic(): array
         'PHP ' . PHP_VERSION . (PHP_VERSION_ID >= 80100 ? '' : ' — il faut au moins 8.1'),
     ];
 
-    foreach (['pdo_mysql' => 'MySQL', 'json' => 'JSON', 'hash' => 'Hachage', 'mbstring' => 'mbstring'] as $ext => $nom) {
+    foreach (['json' => 'JSON', 'hash' => 'Hachage', 'mbstring' => 'mbstring'] as $ext => $nom) {
         $checks[] = [extension_loaded($ext), $nom . ' (' . $ext . ')'];
     }
+
+    // Une seule des deux suffit. Les afficher comme deux obligations ferait
+    // croire a une installation impossible alors qu'il ne manque rien.
+    $mysql = extension_loaded('pdo_mysql');
+    $sqlite = extension_loaded('pdo_sqlite');
+
+    $checks[] = [
+        $mysql || $sqlite,
+        'Base de donnees : ' . trim(($mysql ? 'MySQL ' : '') . ($sqlite ? 'SQLite' : ''))
+            . ($mysql || $sqlite ? '' : 'aucun pilote disponible (pdo_mysql ou pdo_sqlite)'),
+    ];
 
     $checks[] = [
         QrRenderer::pngDisponible(),
@@ -77,6 +95,19 @@ function diagnostic(): array
     return $checks;
 }
 
+/**
+ * Sert-on une installation locale ?
+ *
+ * Sur un poste de developpement, SQLite evite d'avoir a creer une base et des
+ * identifiants avant meme de voir l'application tourner. On ne fait que
+ * preselectionner : le choix reste entier.
+ */
+$hote = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+$hote = explode(':', $hote)[0];
+$enLocal = in_array($hote, ['localhost', '127.0.0.1', '::1', '[::1]'], true)
+    || str_ends_with($hote, '.local')
+    || str_ends_with($hote, '.test');
+
 // L'installation est-elle deja faite ? Si oui, on ne touche a rien.
 $dejaInstalle = Config::exists();
 
@@ -85,8 +116,13 @@ $dejaInstalle = Config::exists();
 if (!$dejaInstalle && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $champ = static fn (string $k): string => trim((string) ($_POST[$k] ?? ''));
 
+    // SQLite ou MySQL. SQLite ne demande aucun serveur ni identifiant : c'est ce
+    // qui permet d'essayer Scannem sur un WAMP local en une seule etape. Les
+    // hebergements mutualises, eux, n'offrent souvent que MySQL.
+    $pilote = $champ('db_driver') === 'sqlite' ? 'sqlite' : 'mysql';
+
     $valeurs = [
-        'db_driver' => 'mysql',
+        'db_driver' => $pilote,
         'db_host' => $champ('db_host') ?: 'localhost',
         'db_port' => (int) ($champ('db_port') ?: 3306),
         'db_name' => $champ('db_name'),
@@ -94,10 +130,16 @@ if (!$dejaInstalle && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         'db_pass' => (string) ($_POST['db_pass'] ?? ''),
     ];
 
+    if ($pilote === 'sqlite') {
+        // Le fichier atterrit dans le dossier de donnees, celui-la meme qui
+        // contient deja le secret de signature et que le .htaccess protege.
+        $valeurs['db_path'] = Config::storagePath('scannem.sqlite');
+    }
+
     $adminUser = $champ('admin_user');
     $adminPass = (string) ($_POST['admin_pass'] ?? '');
 
-    if ($valeurs['db_name'] === '' || $valeurs['db_user'] === '') {
+    if ($pilote === 'mysql' && ($valeurs['db_name'] === '' || $valeurs['db_user'] === '')) {
         $erreurs[] = 'Le nom de la base et l utilisateur sont obligatoires.';
     }
 
@@ -115,7 +157,11 @@ if (!$dejaInstalle && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             // rend toutes les cartes deja imprimees invérifiables.
             $valeurs['keys'] = ['A' => bin2hex(random_bytes(32))];
             $valeurs['active_key_id'] = 'A';
-            $valeurs['cookie_secure'] = true;
+            // Cookies « secure » : indispensable en HTTPS, mais en local on est
+            // en http://localhost et un cookie secure ne serait jamais renvoye —
+            // la connexion a l'administration tournerait en rond sans message.
+            $valeurs['cookie_secure'] = ($_SERVER['HTTPS'] ?? '') !== ''
+                || ($_SERVER['SERVER_PORT'] ?? '') === '443';
 
             // On teste la connexion AVANT d'ecrire quoi que ce soit : mieux vaut
             // une erreur lisible qu'une installation a moitie faite.
@@ -211,6 +257,10 @@ $installateurPresent = is_file(__FILE__);
   code{font-family:"SFMono-Regular",Consolas,monospace;font-size:13px;
        background:var(--bg);padding:2px 5px;border-radius:4px}
   a{color:var(--accent)}
+  .choix{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+  .opt{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink);
+       border:1px solid var(--line);border-radius:9px;padding:12px;cursor:pointer;margin:0}
+  .opt input{width:auto;margin-top:2px;flex:none}
 </style>
 </head>
 <body>
@@ -239,11 +289,13 @@ $installateurPresent = is_file(__FILE__);
   <div class="panel">
     <h2 style="margin-top:0">La suite</h2>
     <ol style="padding-left:20px;margin:0">
-      <li>Ouvre <a href="/admin/">l'administration</a> et connecte-toi.</li>
+      <li>Ouvre <a href="<?= Http::escape($base) ?>/admin/">l'administration</a> et connecte-toi.</li>
       <li>Cree un lot de cartes, puis imprime la planche.</li>
       <li>Enrole chaque telephone depuis <strong>Appareils</strong>.</li>
-      <li>Ouvre <code>/scan/</code> sur les telephones. <strong>En HTTPS
-          obligatoirement</strong>, sinon le navigateur refuse la camera.</li>
+      <li>Ouvre <code><?= Http::escape($base) ?>/scan/</code> sur les telephones. <strong>En HTTPS
+          obligatoirement</strong>, sinon le navigateur refuse la camera.
+          Seule exception : <code>localhost</code>, que les navigateurs
+          considerent comme sur — c'est ce qui permet d'essayer en local.</li>
     </ol>
   </div>
 
@@ -270,7 +322,7 @@ $installateurPresent = is_file(__FILE__);
     Il n'a plus aucune utilite.
   </div>
 
-  <p><a href="/admin/">Aller a l'administration</a></p>
+  <p><a href="<?= Http::escape($base) ?>/admin/">Aller a l'administration</a></p>
 
 <?php else: ?>
 
@@ -305,36 +357,52 @@ $installateurPresent = is_file(__FILE__);
   </div>
 
   <form method="post" class="panel">
-    <h2 style="margin-top:0">Base de donnees MySQL</h2>
-    <p class="note" style="margin:0 0 14px">
-      Cree d'abord une base dans le panneau de ton hebergeur, puis recopie ici
-      les identifiants qu'il t'affiche.
-    </p>
+    <h2 style="margin-top:0">Base de donnees</h2>
 
-    <div class="row">
-      <div class="field">
-        <label for="db_host">Serveur</label>
-        <input type="text" id="db_host" name="db_host" value="localhost" required>
-      </div>
-      <div class="field">
-        <label for="db_port">Port</label>
-        <input type="text" id="db_port" name="db_port" value="3306">
-      </div>
+    <div class="choix">
+      <label class="opt">
+        <input type="radio" name="db_driver" value="sqlite"<?= $enLocal ? ' checked' : '' ?>>
+        <span><strong>SQLite</strong> — un simple fichier, rien a creer.
+          Parfait pour essayer en local.</span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="db_driver" value="mysql"<?= $enLocal ? '' : ' checked' ?>>
+        <span><strong>MySQL</strong> — a choisir sur un hebergement mutualise,
+          qui n'offre generalement que celui-la.</span>
+      </label>
     </div>
 
-    <div class="field">
-      <label for="db_name">Nom de la base</label>
-      <input type="text" id="db_name" name="db_name" required autocapitalize="off" spellcheck="false">
-    </div>
+    <div id="mysql">
+      <p class="note" style="margin:0 0 14px">
+        Cree d'abord une base dans le panneau de ton hebergeur, puis recopie ici
+        les identifiants qu'il t'affiche.
+      </p>
 
-    <div class="row">
-      <div class="field">
-        <label for="db_user">Utilisateur</label>
-        <input type="text" id="db_user" name="db_user" required autocapitalize="off" spellcheck="false">
+      <div class="row">
+        <div class="field">
+          <label for="db_host">Serveur</label>
+          <input type="text" id="db_host" name="db_host" value="localhost">
+        </div>
+        <div class="field">
+          <label for="db_port">Port</label>
+          <input type="text" id="db_port" name="db_port" value="3306">
+        </div>
       </div>
+
       <div class="field">
-        <label for="db_pass">Mot de passe</label>
-        <input type="password" id="db_pass" name="db_pass" autocomplete="off">
+        <label for="db_name">Nom de la base</label>
+        <input type="text" id="db_name" name="db_name" autocapitalize="off" spellcheck="false">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="db_user">Utilisateur</label>
+          <input type="text" id="db_user" name="db_user" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="db_pass">Mot de passe</label>
+          <input type="password" id="db_pass" name="db_pass" autocomplete="off">
+        </div>
       </div>
     </div>
 
@@ -358,6 +426,29 @@ $installateurPresent = is_file(__FILE__);
       valides et d'annuler celles des autres.
     </p>
   </form>
+
+  <script>
+    /*
+     * Simple confort : masquer les champs MySQL quand SQLite est choisi. Aucun
+     * champ n'est marque « required », donc le formulaire reste entierement
+     * utilisable sans JavaScript — la validation qui compte est cote serveur.
+     */
+    (function () {
+      var bloc = document.getElementById('mysql');
+      var choix = document.querySelectorAll('input[name=db_driver]');
+
+      function refletter() {
+        var sqlite = document.querySelector('input[name=db_driver]:checked').value === 'sqlite';
+        bloc.style.display = sqlite ? 'none' : '';
+      }
+
+      for (var i = 0; i < choix.length; i++) {
+        choix[i].addEventListener('change', refletter);
+      }
+
+      refletter();
+    })();
+  </script>
 
 <?php endif; ?>
 

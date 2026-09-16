@@ -1,0 +1,21 @@
+# Racine web = ce dossier (disposition classique : la racine du site pointe sur
+# public/). Sur un mutualise ou la racine est imposee, c'est le .htaccess genere
+# a la racine de l'archive qui s'applique, pas celui-ci.
+
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Pas de RewriteBase : la cible est relative, donc la regle fonctionne
+    # telle quelle a la racine du site comme dans un sous-dossier.
+    #
+    # Sans cette reecriture, Apache repondrait 404 sur /admin/ et /api/redeem :
+    # ces chemins n'existent pas sur le disque dans cette disposition. Le serveur
+    # de test de PHP, lui, se replie tout seul sur index.php, ce qui masque
+    # completement le probleme en developpement.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>

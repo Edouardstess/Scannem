@@ -22,7 +22,7 @@ echo $flashBlock;
 
 <div class="panel">
   <h2 style="margin-top:0">Nouveau lot</h2>
-  <form method="post" action="/admin/?p=lots">
+  <form method="post" action="<?= $base ?>/admin/?p=lots">
     <?= $csrf ?>
     <input type="hidden" name="action" value="create_batch">
     <div class="row">
@@ -75,8 +75,8 @@ echo $flashBlock;
         <td><?= $stats['used'] ?> <span style="color:var(--muted)">(<?= $pct ?>%)</span></td>
         <td><?= $stats['revoked'] > 0 ? '<span class="tag red">' . $stats['revoked'] . '</span>' : '—' ?></td>
         <td style="text-align:right;white-space:nowrap">
-          <a class="btn" href="/admin/?p=batch&amp;id=<?= (int) $b['id'] ?>">Ouvrir</a>
-          <a class="btn" href="/admin/?p=sheet&amp;id=<?= (int) $b['id'] ?>" target="_blank">Imprimer</a>
+          <a class="btn" href="<?= $base ?>/admin/?p=batch&amp;id=<?= (int) $b['id'] ?>">Ouvrir</a>
+          <a class="btn" href="<?= $base ?>/admin/?p=sheet&amp;id=<?= (int) $b['id'] ?>" target="_blank">Imprimer</a>
         </td>
       </tr>
     <?php endforeach; ?>

@@ -142,6 +142,141 @@ final class DeploiementTest extends TestCase
         }
     }
 
+    // ------------------------------------------ Installation en sous-dossier
+
+    public function testLesVuesDeLAdminNEmettentAucuneUrlPartantDeLaRacineDuSite(): void
+    {
+        // Une URL absolue comme href="/admin/?p=lots" sort de l'application des
+        // qu'elle n'occupe pas la racine du site : sous htdocs/scannem/, le lien
+        // mene sur /admin/ que le serveur ne trouve pas. Les vues doivent donc
+        // toutes intercaler le prefixe.
+        $vues = array_merge(
+            [Config::rootPath('app/admin/layout.php'), Config::rootPath('app/admin/index.php')],
+            glob(Config::rootPath('app/admin/pages/*.php')) ?: []
+        );
+
+        foreach ($vues as $vue) {
+            self::assertDoesNotMatchRegularExpression(
+                '#(href|action)="/(admin|scan|api)/#',
+                (string) file_get_contents($vue),
+                basename($vue) . ' doit prefixer ses liens (voir Scannem\\Url)'
+            );
+        }
+    }
+
+    public function testLeRouteurRetireLePrefixeAvantDeChoisirLaRoute(): void
+    {
+        $source = (string) file_get_contents(Config::rootPath('public/index.php'));
+
+        self::assertStringContainsString(
+            'Url::strip(',
+            $source,
+            'Sans cela, /scannem/admin ne correspond a aucune route et le routeur'
+            . ' repond sa propre page « introuvable »'
+        );
+    }
+
+    public function testLeScannerPrefixeSesAppels(): void
+    {
+        $app = (string) file_get_contents(Config::rootPath('public/scan/app.js'));
+
+        self::assertStringContainsString(
+            'fetch(BASE + route',
+            $app,
+            'Les appels API doivent partir du dossier de l installation, pas de'
+            . ' la racine du site'
+        );
+
+        $sw = (string) file_get_contents(Config::rootPath('public/scan/sw.js'));
+
+        self::assertStringContainsString(
+            'self.location.pathname',
+            $sw,
+            'Le service worker doit deduire son prefixe de son propre emplacement'
+        );
+
+        // Une entree de la coquille ecrite en dur ne serait mise en cache qu a
+        // la racine du site : ailleurs, addAll echoue et l installation du
+        // service worker est abandonnee — plus de demarrage hors reseau, sans le
+        // moindre message.
+        self::assertDoesNotMatchRegularExpression(
+            "#^\s+'/scan/#m",
+            $sw,
+            'Les entrees de la coquille doivent etre prefixees'
+        );
+    }
+
+    public function testLeManifestePwaUtiliseDesCheminsRelatifs(): void
+    {
+        $manifeste = json_decode(
+            (string) file_get_contents(Config::rootPath('public/scan/manifest.json')),
+            true
+        );
+
+        self::assertIsArray($manifeste);
+
+        // Relatifs au manifeste lui-meme : ils designent le bon dossier quel que
+        // soit le prefixe d'installation.
+        foreach (['start_url', 'scope'] as $clef) {
+            self::assertStringStartsWith('.', (string) $manifeste[$clef], "$clef doit etre relatif");
+        }
+
+        self::assertStringStartsWith('.', (string) $manifeste['icons'][0]['src']);
+    }
+
+    public function testLaPageScannerNeChargeQueDesFichiersRelatifs(): void
+    {
+        $html = (string) file_get_contents(Config::rootPath('public/scan/index.html'));
+
+        self::assertDoesNotMatchRegularExpression(
+            '#(src|href)="/#',
+            $html,
+            'La page du scanner est servie sous <prefixe>/scan/ : ses ressources'
+            . ' doivent etre designees relativement'
+        );
+    }
+
+    // ------------------------------------------- Diagnostic avant le chargement
+
+    public function testLesPointsDEntreePassentParLAmorce(): void
+    {
+        // L'amorce refuse poliment un PHP trop ancien. Sans elle, le chargement
+        // de la premiere classe de src/ produit une erreur d'analyse — page
+        // blanche ou HTTP 500 sans la moindre explication.
+        $entrees = [
+            'public/index.php',
+            'public/install.php',
+            'app/admin/index.php',
+            'app/api/bootstrap.php',
+        ];
+
+        foreach ($entrees as $entree) {
+            self::assertStringContainsString(
+                'scannem_amorcer(',
+                (string) file_get_contents(Config::rootPath($entree)),
+                "$entree doit passer par app/amorce.php"
+            );
+        }
+    }
+
+    public function testLAmorceResteLisibleParUnPhpAncien(): void
+    {
+        $source = (string) file_get_contents(Config::rootPath('app/amorce.php'));
+
+        // Elle s'execute AVANT de savoir si la version de PHP convient : la
+        // moindre syntaxe recente la rendrait illisible par le moteur qu'elle
+        // est justement chargee de signaler.
+        foreach (['readonly ', ': never', 'match (', '?->', 'str_starts_with('] as $syntaxe) {
+            self::assertStringNotContainsString(
+                $syntaxe,
+                $source,
+                "app/amorce.php doit rester lisible par un PHP ancien (trouve : $syntaxe)"
+            );
+        }
+
+        self::assertStringContainsString('PHP_VERSION_ID < 80100', $source);
+    }
+
     public function testLeScannerNEmbarqueAucunAppelVersUnCdn(): void
     {
         $sources = ['public/scan/app.js', 'public/scan/index.html', 'public/scan/sw.js'];

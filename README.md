@@ -173,6 +173,53 @@ premier scan.
 
 ---
 
+## Essayer en local (WAMP, XAMPP, MAMP, ou rien du tout)
+
+### Le plus rapide : le serveur intégré de PHP
+
+```bash
+composer install
+php -S localhost:8000 -t public
+```
+
+Puis <http://localhost:8000/install.php>, en choisissant **SQLite** : aucune base
+à créer, aucun identifiant à saisir. L'administration est sur `/admin/`, le
+scanner sur `/scan/`.
+
+### Avec Apache (WAMP, XAMPP, MAMP)
+
+**PHP 8.1 minimum.** WAMP et XAMPP sont souvent livrés avec une version plus
+ancienne, et les dépendances de génération de QR ne s'y chargent pas. Sous WAMP :
+clic gauche sur l'icône de la barre des tâches, *PHP → Version*. Si PHP est trop
+ancien, Scannem l'affiche en toutes lettres au lieu de rendre une page blanche.
+
+Deux dispositions fonctionnent, au choix :
+
+| Disposition | Où déposer | URL |
+|---|---|---|
+| Racine web sur `public/` | n'importe où | `http://localhost/` |
+| Dépôt entier dans `www\scannem\` | `www/` ou `htdocs/` | `http://localhost/scannem/public/` |
+| Archive de déploiement à plat | `www\scannem\` | `http://localhost/scannem/` |
+
+**Un sous-dossier convient : Scannem déduit son préfixe d'installation tout
+seul** (`Scannem\Url`), et toutes les URL qu'il produit en tiennent compte —
+liens de l'administration, appels du scanner, service worker, manifeste PWA.
+
+La caméra fonctionne sur `http://localhost`, que les navigateurs considèrent
+comme un contexte sûr. Depuis un téléphone pointant sur l'IP du poste, en
+revanche, il faudra du HTTPS.
+
+### Si rien ne s'affiche
+
+| Symptôme | Cause |
+|---|---|
+| Page blanche, ou HTTP 500 muet | PHP trop ancien. Depuis l'ajout de `app/amorce.php`, un message explicite le dit à la place. |
+| « Les dépendances ne sont pas installées » | `composer install` n'a pas été lancé, ou `vendor/` a été oublié pendant l'envoi FTP. |
+| 404 d'Apache sur `/scan/` | Version antérieure à la gestion du préfixe : les URL partaient de la racine du site. Mettre à jour. |
+| 404 d'Apache sur `/admin/` avec la racine web sur `public/` | `mod_rewrite` désactivé. `public/.htaccess` en a besoin pour cette disposition ; l'archive de déploiement, elle, n'en dépend pas. |
+
+---
+
 ## Installation en ligne de commande (VPS, local, hébergement avec SSH)
 
 ```bash
@@ -201,6 +248,11 @@ Sur un hébergement mutualisé sans accès au vhost, `install.php` écrit un
 redirige vers `public/`. C'est un filet de sécurité, pas un substitut : vérifiez
 après déploiement que `https://votredomaine/storage/config.php` renvoie bien une
 erreur.
+
+En revanche, **un sous-dossier ne pose aucun problème** : `/scannem/` comme
+racine d'installation fonctionne sans configuration. Le préfixe est déduit de
+`SCRIPT_NAME`, c'est-à-dire du fichier réellement exécuté, ce qui reste juste
+avec ou sans réécriture.
 
 ---
 
@@ -446,13 +498,20 @@ suite reste exécutable partout.
 public/          racine web (le seul dossier exposé)
   scan/          PWA vigile : caméra, hors-ligne, verdicts plein écran
   admin/         → app/admin
-src/             Token, CardRepository, Auth, RateLimiter, OfflinePack…
+  .htaccess      réécriture vers index.php quand la racine web pointe ici
+src/             Token, CardRepository, Auth, RateLimiter, OfflinePack, Url…
+app/amorce.php   version de PHP, dépendances, préfixe d'installation
 app/api/         redeem, verify, enroll, pack, sync
 app/admin/       interface organisateur
 bin/             install.php, generate-batch.php
 storage/         HORS webroot : base, secret, exports
 tests/
 ```
+
+`app/amorce.php` s'exécute avant tout le reste, et **avant** de savoir si la
+version de PHP permet de charger `src/`. Elle est donc écrite en PHP 7 : c'est
+la seule façon de transformer deux pannes muettes — PHP trop ancien, `vendor/`
+absent — en messages lisibles plutôt qu'en page blanche.
 
 ---
 
