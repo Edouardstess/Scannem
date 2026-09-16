@@ -291,6 +291,99 @@ DirectoryIndex index.php index.html
 </IfModule>
 HTACCESS);
 
+/**
+ * Lanceur Windows.
+ *
+ * Il existe parce que la marche a franchir en local n'est pas technique, elle
+ * est administrative : WampServer est souvent livre avec un PHP anterieur a
+ * 8.1, et le menu qui permet d'en changer ne propose que les versions deja
+ * installees. L'utilisateur se retrouve alors a chercher un chemin du genre
+ * C:\wamp64\bin\php\php8.3.0\php.exe, a la main, dans une invite de commandes.
+ *
+ * Ce fichier fait cette recherche a sa place : il retient le premier PHP 8.1+
+ * qu'il trouve — chez WampServer, chez XAMPP, ou dans le PATH — et demarre le
+ * serveur integre. Un double-clic remplace trois pages d'explications.
+ *
+ * Pas d'accents : la console Windows n'est pas en UTF-8 et les afficherait mal.
+ */
+file_put_contents($travail . '/demarrer-en-local.bat', str_replace("\n", "\r\n", <<<'BAT'
+@echo off
+setlocal enabledelayedexpansion
+cd /d "%~dp0"
+
+echo.
+echo   Scannem - demarrage en local
+echo   ----------------------------
+echo.
+
+set "PHP="
+
+rem PHP livre avec WampServer, puis avec XAMPP. On parcourt les dossiers du plus
+rem recent au plus ancien (/o-n) et on garde le premier qui convient.
+for %%R in ("C:\wamp64\bin\php" "C:\wamp\bin\php" "C:\xampp\php") do (
+    if exist "%%~R\php.exe" (
+        if not defined PHP call :essayer "%%~R\php.exe"
+    )
+    if exist "%%~R" (
+        for /f "delims=" %%D in ('dir /b /ad /o-n "%%~R" 2^>nul') do (
+            if not defined PHP call :essayer "%%~R\%%D\php.exe"
+        )
+    )
+)
+
+rem En dernier ressort, un PHP declare dans le PATH.
+if not defined PHP (
+    for /f "delims=" %%P in ('where php 2^>nul') do (
+        if not defined PHP call :essayer "%%P"
+    )
+)
+
+if not defined PHP (
+    echo   Aucun PHP 8.1 ou plus recent n'a ete trouve sur cette machine.
+    echo.
+    echo   Scannem et ses dependances de generation de QR en ont besoin.
+    echo   WampServer ne propose que les versions deja installees : pour en
+    echo   ajouter une, telecharge un module PHP recent sur
+    echo.
+    echo       wampserver.aviatechno.net   -   rubrique "PHP versions"
+    echo.
+    echo   lance son installateur, puis relance ce fichier.
+    echo.
+    pause
+    exit /b 1
+)
+
+echo   PHP utilise : !PHP!
+echo.
+echo   Ouvre : http://localhost:8000/
+echo.
+echo   Cette fenetre EST le serveur : la fermer arrete Scannem.
+echo   Le navigateur s'ouvre avant que le serveur n'ait fini de demarrer : si
+echo   la page ne s'affiche pas du premier coup, rafraichis-la.
+echo   Si le port 8000 est deja pris, le demarrage echouera juste en dessous ;
+echo   remplace alors 8000 par 8001 dans les deux dernieres lignes utiles.
+echo.
+
+start "" http://localhost:8000/
+"!PHP!" -S localhost:8000
+
+echo.
+echo   Serveur arrete.
+pause
+exit /b 0
+
+rem ---------------------------------------------------------------------------
+rem Retient le binaire passe en argument s'il existe et annonce au moins 8.1.
+rem C'est PHP lui-meme qui repond : aucun numero de version a deviner d'apres un
+rem nom de dossier. version_compare plutot qu'une comparaison numerique parce
+rem que < et >= sont des operateurs de redirection pour cmd.exe.
+:essayer
+if not exist "%~1" exit /b 0
+"%~1" -r "exit(version_compare(PHP_VERSION,'8.1','ge')?0:1);" >nul 2>&1
+if not errorlevel 1 set "PHP=%~1"
+exit /b 0
+BAT));
+
 file_put_contents($travail . '/LISEZ-MOI.txt', <<<'TXT'
 SCANNEM — INSTALLATION
 ======================
@@ -317,14 +410,22 @@ SUR UN HEBERGEMENT
 6. Le scanner est sur https://TON-DOMAINE/scan/
    HTTPS OBLIGATOIRE, sinon le navigateur refuse l'acces a la camera.
 
-EN LOCAL (WAMP, XAMPP, MAMP)
-----------------------------
+EN LOCAL, SOUS WINDOWS
+----------------------
 
-Meme chose, avec trois differences :
+Le plus simple : double-clique sur   demarrer-en-local.bat
+
+Il cherche tout seul un PHP 8.1 ou plus recent parmi ceux que WampServer et
+XAMPP installent, demarre le serveur et ouvre le navigateur. Rien a
+configurer, Apache n'est pas touche. Ouvre ensuite install.php depuis la
+page qui s'affiche, et choisis SQLite : aucune base a creer.
+
+Si tu preferes passer par ton Apache :
 
   - PHP 8.1 AU MINIMUM. WAMP et XAMPP sont souvent livres avec une version
-    plus ancienne. Sous WAMP : clic gauche sur l'icone de la barre des
-    taches, PHP > Version. Si PHP est trop ancien, Scannem te le dit en
+    plus ancienne, et le menu PHP > Version ne propose que les versions
+    DEJA INSTALLEES. Pour en ajouter une : wampserver.aviatechno.net,
+    rubrique "PHP versions". Si PHP est trop ancien, Scannem te le dit en
     toutes lettres au lieu d'afficher une page blanche.
 
   - Depose le contenu de ce dossier dans www\scannem\ (WAMP) ou

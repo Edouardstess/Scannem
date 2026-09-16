@@ -236,6 +236,56 @@ final class DeploiementTest extends TestCase
         );
     }
 
+    // ---------------------------------------------------- Lanceur Windows
+
+    public function testLeLanceurWindowsNeRetientQuUnPhpAssezRecent(): void
+    {
+        $source = (string) file_get_contents(Config::rootPath('bin/build-release.php'));
+
+        // Le lanceur interroge PHP lui-meme plutot que de lire un numero dans un
+        // nom de dossier : WampServer nomme les siens librement, et un PHP 8.0
+        // retenu par erreur ramenerait la page blanche que tout ceci evite.
+        self::assertStringContainsString(
+            "version_compare(PHP_VERSION,'8.1','ge')",
+            $source,
+            'Le lanceur doit demander sa version a chaque binaire candidat'
+        );
+
+        // < et >= sont des operateurs de redirection pour cmd.exe : les employer
+        // dans le test de version enverrait la sortie dans un fichier au lieu de
+        // comparer quoi que ce soit.
+        self::assertStringNotContainsString(
+            'PHP_VERSION_ID <',
+            $source,
+            'Le test de version ne doit pas contenir de caractere de redirection'
+        );
+    }
+
+    public function testLeLanceurWindowsResteEnAsciiEtEnCrLf(): void
+    {
+        $source = (string) file_get_contents(Config::rootPath('bin/build-release.php'));
+
+        // Un .bat en fins de ligne Unix est execute de travers par cmd.exe.
+        self::assertStringContainsString(
+            'str_replace("\n", "\r\n"',
+            $source,
+            'Le lanceur doit partir en fins de ligne Windows'
+        );
+
+        self::assertSame(
+            1,
+            preg_match("/<<<'BAT'\n(.*?)\nBAT\)/s", $source, $trouve),
+            'Le corps du lanceur doit etre un heredoc BAT'
+        );
+
+        // La console Windows n'est pas en UTF-8 : un accent y sort en charabia.
+        self::assertSame(
+            $trouve[1],
+            (string) preg_replace('/[^\x09\x0a\x20-\x7e]/', '', $trouve[1]),
+            'Le lanceur ne doit contenir aucun caractere hors ASCII'
+        );
+    }
+
     // ------------------------------------------- Diagnostic avant le chargement
 
     public function testLesPointsDEntreePassentParLAmorce(): void

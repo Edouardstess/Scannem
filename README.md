@@ -175,7 +175,18 @@ premier scan.
 
 ## Essayer en local (WAMP, XAMPP, MAMP, ou rien du tout)
 
-### Le plus rapide : le serveur intégré de PHP
+### Le plus rapide sous Windows : `demarrer-en-local.bat`
+
+L'archive de déploiement contient un lanceur à double-cliquer. Il cherche un PHP
+8.1+ parmi ceux que WampServer et XAMPP installent déjà — c'est PHP lui-même
+qu'il interroge, pas le nom du dossier — démarre le serveur intégré et ouvre le
+navigateur. Apache n'est pas touché, rien n'est à configurer.
+
+S'il ne trouve rien d'assez récent, il le dit et indique où récupérer un module
+PHP. C'est le cas fréquent : WampServer est souvent livré avec PHP 8.0, et son
+menu *PHP → Version* ne liste que les versions **déjà installées**.
+
+### Le serveur intégré de PHP, à la main
 
 ```bash
 composer install
