@@ -1,0 +1,13 @@
+/vendor/
+/storage/
+/node_modules/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.phpunit.result.cache
+.phpunit.cache/
+.DS_Store
+*.log
+
+# Genere par bin/install.php pour les hebergements mutualises
+/.htaccess

@@ -1,0 +1,263 @@
+/*
+ * Interface vigile.
+ *
+ * Contraintes reelles du poste : il fait nuit, il y a du bruit, le telephone est
+ * tenu a bout de bras et la personne en face attend. Le verdict doit donc etre
+ * lisible en une fraction de seconde, sans lecture attentive. D'ou le plein
+ * ecran colore plutot qu'un message discret.
+ */
+
+:root {
+  --bg: #101216;
+  --panel: #191c22;
+  --ink: #f2f4f7;
+  --muted: #98a1ae;
+  --line: #2a2e37;
+  --accent: #4d7cff;
+  --green: #12a150;
+  --red: #d32a20;
+  --amber: #c07a08;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overscroll-behavior: none;
+}
+
+.hidden { display: none !important; }
+
+.screen { height: 100%; display: flex; flex-direction: column; }
+
+/* ------------------------------------------------------------- Enrolement */
+
+.pane {
+  margin: auto;
+  padding: 28px 22px;
+  max-width: 420px;
+  width: 100%;
+}
+.pane h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.5px; }
+.lead { color: var(--muted); margin: 0 0 26px; }
+
+label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+input[type=text] {
+  width: 100%;
+  padding: 15px;
+  font-size: 21px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 2px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 11px;
+  border: 1px solid transparent;
+}
+
+.big {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  font-size: 17px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+}
+.big.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+.big.danger { background: transparent; border: 1px solid var(--red); color: #ff8a80; }
+.big:active { transform: scale(0.99); }
+
+.msg { min-height: 22px; font-size: 14px; margin: 12px 0 0; }
+.msg.err { color: #ff8a80; }
+.msg.ok { color: #6ee7a0; }
+
+.fine { font-size: 13px; color: var(--muted); margin: 14px 0 0; }
+
+/* ----------------------------------------------------------------- Barre */
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(10px, env(safe-area-inset-top)) 14px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.who { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 14px; }
+#device-label { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.net {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(18, 161, 80, 0.18);
+  color: #6ee7a0;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.net.off { background: rgba(192, 122, 8, 0.2); color: #f6c453; }
+
+.bar-actions { display: flex; align-items: center; gap: 10px; }
+
+.queue {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 26px;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: var(--amber);
+  color: #1a1200;
+}
+
+.icon {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 19px;
+  width: 42px;
+  height: 42px;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------- Camera */
+
+#camera-wrap {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#video { width: 100%; height: 100%; object-fit: cover; }
+
+.reticle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.reticle span {
+  width: min(66vw, 300px);
+  height: min(66vw, 300px);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
+}
+
+.hint {
+  position: absolute;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+  padding: 0 20px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* --------------------------------------------------------------- Verdict */
+
+.verdict {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px;
+  animation: pop 0.12s ease-out;
+}
+@keyframes pop { from { opacity: 0; } to { opacity: 1; } }
+
+.verdict.green { background: var(--green); }
+.verdict.red   { background: var(--red); }
+.verdict.amber { background: var(--amber); }
+
+.verdict-inner { text-align: center; max-width: 460px; width: 100%; }
+
+.vicon { font-size: 92px; line-height: 1; margin-bottom: 14px; }
+
+.vlabel {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1.1;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+.vdetail {
+  font-size: 16px;
+  opacity: 0.94;
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+.vdetail strong { font-weight: 700; }
+
+.verdict .big.ghost {
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+/* ----------------------------------------------------------------- Menu */
+
+.menu {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.menu-inner { padding: max(20px, env(safe-area-inset-top)) 20px 50px; max-width: 480px; margin: 0 auto; }
+.menu h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 26px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.menu h2:first-child { margin-top: 0; }
+.menu h2.danger-h { color: #ff8a80; border-color: rgba(211, 42, 32, 0.4); }
+
+.kv { display: flex; justify-content: space-between; gap: 14px; margin: 9px 0; font-size: 14px; }
+.kv span { color: var(--muted); }
+.kv strong { text-align: right; word-break: break-word; }
+
+.menu .big { margin-top: 10px; }

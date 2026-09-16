@@ -1,0 +1,19 @@
+{
+  "name": "Scannem — Controle d'entree",
+  "short_name": "Scannem",
+  "description": "Verification des cartes a QR code a l'entree",
+  "start_url": "/scan/",
+  "scope": "/scan/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101216",
+  "theme_color": "#101216",
+  "icons": [
+    {
+      "src": "/scan/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

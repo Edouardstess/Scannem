@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="42" fill="#101216"/>
+  <g fill="#4d7cff">
+    <!-- Motifs de reperage, comme sur un vrai QR -->
+    <path d="M40 40h34v34H40zM48 48h18v18H48z" fill-rule="evenodd"/>
+    <path d="M118 40h34v34h-34zM126 48h18v18h-18z" fill-rule="evenodd"/>
+    <path d="M40 118h34v34H40zM48 126h18v18H48z" fill-rule="evenodd"/>
+  </g>
+  <g fill="#f2f4f7">
+    <rect x="86" y="40" width="10" height="10"/>
+    <rect x="86" y="60" width="10" height="10"/>
+    <rect x="104" y="86" width="10" height="10"/>
+    <rect x="86" y="104" width="10" height="10"/>
+    <rect x="124" y="104" width="10" height="10"/>
+    <rect x="142" y="122" width="10" height="10"/>
+    <rect x="104" y="142" width="10" height="10"/>
+  </g>
+  <!-- Faisceau de lecture -->
+  <rect x="30" y="91" width="132" height="6" rx="3" fill="#12a150" opacity="0.9"/>
+</svg>

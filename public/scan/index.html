@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#101216">
+<title>Scannem &mdash; Controle</title>
+<link rel="icon" href="/scan/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/scan/icon.svg">
+<link rel="manifest" href="/scan/manifest.json">
+<link rel="stylesheet" href="/scan/style.css">
+</head>
+<body>
+
+<!-- Ecran d'enrolement : premier lancement sur un telephone neuf -->
+<section id="enroll" class="screen">
+  <div class="pane">
+    <h1>Scannem</h1>
+    <p class="lead">Cet appareil n'est pas encore enrole.</p>
+    <label for="code">Code d'enrolement</label>
+    <input type="text" id="code" inputmode="latin" autocapitalize="characters"
+           autocomplete="off" spellcheck="false" placeholder="A1B2-C3D4-E5F6">
+    <button id="enroll-go" class="big">Enroler cet appareil</button>
+    <p id="enroll-msg" class="msg"></p>
+    <p class="fine">
+      Le code est fourni par l'organisateur depuis l'administration.
+      Il est valable 15 minutes et pour un seul appareil.
+    </p>
+  </div>
+</section>
+
+<!-- Ecran principal : camera + verdict -->
+<section id="main" class="screen hidden">
+
+  <header class="bar">
+    <div class="who">
+      <span id="device-label">&mdash;</span>
+      <span id="net" class="net">en ligne</span>
+    </div>
+    <div class="bar-actions">
+      <span id="queue-badge" class="queue hidden">0</span>
+      <button id="menu-btn" class="icon" aria-label="Menu">&#9776;</button>
+    </div>
+  </header>
+
+  <div id="camera-wrap">
+    <video id="video" playsinline muted></video>
+    <canvas id="canvas" class="hidden"></canvas>
+    <div class="reticle"><span></span></div>
+    <p id="hint" class="hint">Vise le QR code de la carte</p>
+  </div>
+
+  <!-- Verdict plein ecran. Couleur et texte lisibles a bout de bras, de nuit. -->
+  <div id="verdict" class="verdict hidden">
+    <div class="verdict-inner">
+      <div id="verdict-icon" class="vicon"></div>
+      <div id="verdict-label" class="vlabel"></div>
+      <div id="verdict-detail" class="vdetail"></div>
+      <button id="verdict-next" class="big ghost">Scanner la carte suivante</button>
+    </div>
+  </div>
+
+  <!-- Panneau lateral -->
+  <div id="menu" class="menu hidden">
+    <div class="menu-inner">
+      <h2>Appareil</h2>
+      <p class="kv"><span>Nom</span><strong id="m-label">&mdash;</strong></p>
+      <p class="kv"><span>Reseau</span><strong id="m-net">&mdash;</strong></p>
+      <p class="kv"><span>En attente d'envoi</span><strong id="m-queue">0</strong></p>
+      <p class="kv"><span>Pack hors-ligne</span><strong id="m-pack">aucun</strong></p>
+
+      <h2>Saisie manuelle</h2>
+      <p class="fine">Si la camera ne lit pas la carte, recopie le code imprime dessous.</p>
+      <input type="text" id="manual" inputmode="latin" autocapitalize="characters"
+             autocomplete="off" spellcheck="false" placeholder="835F JS5N C79P BJF5">
+      <button id="manual-go" class="big">Valider ce code</button>
+
+      <h2>Avant l'evenement</h2>
+      <button id="pack-btn" class="big ghost">Telecharger le pack hors-ligne</button>
+      <p class="fine">
+        A faire tant que le reseau est bon. Le pack permet de continuer a controler
+        pendant une coupure. Il ne contient aucune clef : un telephone perdu ne
+        permet pas de fabriquer des cartes.
+      </p>
+
+      <h2>File d'attente</h2>
+      <button id="sync-btn" class="big ghost">Synchroniser maintenant</button>
+      <p id="sync-msg" class="msg"></p>
+
+      <h2 class="danger-h">Zone sensible</h2>
+      <button id="reset-btn" class="big danger">Desenroler cet appareil</button>
+      <p class="fine">Efface le jeton et la file locale. A ne faire qu'apres synchronisation.</p>
+
+      <button id="menu-close" class="big ghost" style="margin-top:22px">Fermer</button>
+    </div>
+  </div>
+
+</section>
+
+<script src="/scan/vendor/jsQR.js"></script>
+<script src="/scan/app.js"></script>
+</body>
+</html>
