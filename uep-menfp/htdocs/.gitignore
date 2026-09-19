@@ -1,0 +1,18 @@
+# Secrets et fichiers propres à une installation
+config/config.local.php
+
+# Journaux et fichiers déposés
+storage/logs/*
+!storage/logs/.gitkeep
+!storage/logs/.htaccess
+storage/uploads/*
+!storage/uploads/.gitkeep
+!storage/uploads/.htaccess
+
+# Systèmes d'exploitation et éditeurs
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/

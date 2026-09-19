@@ -1,0 +1,82 @@
+# ============================================================================
+# UEP / MENFP — Configuration Apache (hébergement mutualisé, ByetHost compris)
+# ============================================================================
+
+Options -Indexes
+AddDefaultCharset UTF-8
+DirectoryIndex index.php
+
+# --- Pages d'erreur gérées par l'application --------------------------------
+ErrorDocument 403 /index.php
+ErrorDocument 404 /index.php
+
+# --- Types et compression ---------------------------------------------------
+<IfModule mod_mime.c>
+    AddType text/css                  .css
+    AddType application/javascript    .js
+    AddType image/svg+xml             .svg
+    AddType font/woff2                .woff2
+    AddType font/woff                 .woff
+</IfModule>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml
+    AddOutputFilterByType DEFLATE application/javascript application/json image/svg+xml
+</IfModule>
+
+# --- Cache des ressources statiques -----------------------------------------
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css          "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType image/svg+xml     "access plus 30 days"
+    ExpiresByType font/woff2        "access plus 1 year"
+    ExpiresByType font/woff         "access plus 1 year"
+</IfModule>
+
+# --- Fichiers et dossiers jamais servis en HTTP ------------------------------
+# Chaque règle est limitée aux requêtes venant du client (REDIRECT_STATUS vide) :
+# sans ce garde-fou, la réécriture interne vers index.php repasse dans le jeu de
+# règles et peut renvoyer 403 sur toutes les pages.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteCond %{ENV:REDIRECT_STATUS} ^$
+    RewriteRule ^(?:config|core|controllers|middlewares|models|routes|views|database|storage|tools|docs)(?:/|$) - [F,L]
+
+    RewriteCond %{ENV:REDIRECT_STATUS} ^$
+    RewriteRule (^|/)\. - [F,L]
+
+    RewriteCond %{ENV:REDIRECT_STATUS} ^$
+    RewriteRule \.(sql|md|log|ini|bak|old|dist|lock|json|yml|yaml)$ - [F,L]
+
+    # Ressources statiques existantes : servies telles quelles.
+    RewriteCond %{REQUEST_URI} !(^|/)index\.php$
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Tout le reste passe par le contrôleur frontal.
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# --- Interdiction directe (si mod_rewrite est absent) -----------------------
+<FilesMatch "\.(sql|md|log|ini|bak|old|dist|lock)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
