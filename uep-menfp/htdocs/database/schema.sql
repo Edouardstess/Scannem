@@ -8,7 +8,6 @@
 --   2. Questionnaire dynamique des UPD  (catalogue + réponses, sections A à Q)
 --   3. Questionnaire dynamique des DDE  (catalogue + réponses, sections A à F)
 --   4. Réquisitions du service informatique
---   5. Vues de consolidation
 -- ----------------------------------------------------------------------------
 -- IMPORTATION
 --   Hébergement mutualisé (ByetHost, InfinityFree…) : le nom de la base est
@@ -30,10 +29,7 @@ SET NAMES utf8mb4;
 SET SQL_MODE = 'STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 SET FOREIGN_KEY_CHECKS = 0;
 
--- Réimportation propre : les objets sont supprimés avant d'être recréés.
-DROP VIEW  IF EXISTS vue_requisitions_recap;
-DROP VIEW  IF EXISTS vue_completion_upd;
-DROP VIEW  IF EXISTS vue_completion_dde;
+-- Réimportation propre : les tables sont supprimées avant d'être recréées.
 DROP TABLE IF EXISTS requisition_articles;
 DROP TABLE IF EXISTS requisitions;
 DROP TABLE IF EXISTS requisition_sequences;
@@ -374,58 +370,23 @@ CREATE TABLE requisition_articles (
   COMMENT='Articles (lignes) demandés dans chaque réquisition';
 
 -- ============================================================================
--- VUES UTILES POUR LE TABLEAU DE BORD
+-- PAS DE VUES SQL
+-- ----------------------------------------------------------------------------
+-- Les versions précédentes créaient trois vues de consolidation
+-- (vue_requisitions_recap, vue_completion_upd, vue_completion_dde).
+--
+-- Elles ont été retirées pour deux raisons :
+--   1. L'application ne s'en servait pas : les contrôleurs interrogent
+--      directement les tables, avec des requêtes filtrées et paginées.
+--   2. La plupart des hébergements mutualisés (ByetHost, InfinityFree…)
+--      REFUSENT le privilège CREATE VIEW. L'import s'interrompait alors sur
+--      « 1142 CREATE VIEW command denied », juste avant le chargement des
+--      questions : la base se retrouvait avec ses tables mais aucun
+--      questionnaire, et l'application était inutilisable.
+--
+-- Le schéma n'utilise donc plus que CREATE TABLE et INSERT, qui sont toujours
+-- autorisés sur la base qu'un hébergeur vous attribue.
 -- ============================================================================
-
--- Vue : montant total et nombre d'articles par réquisition
-CREATE OR REPLACE VIEW vue_requisitions_recap AS
-SELECT
-    r.id,
-    r.numero_requisition,
-    u.nom_complet AS demandeur,
-    r.demandeur_id,
-    r.service_demandeur,
-    r.objet,
-    r.priorite,
-    r.adresse_livraison,
-    r.justification,
-    r.observations,
-    r.date_demande,
-    r.statut,
-    COUNT(ra.id) AS nb_articles,
-    COALESCE(SUM(ra.montant_total), 0) AS montant_total_estime
-FROM requisitions r
-JOIN utilisateurs u ON u.id = r.demandeur_id
-LEFT JOIN requisition_articles ra ON ra.requisition_id = r.id
-GROUP BY r.id, r.numero_requisition, u.nom_complet, r.demandeur_id,
-         r.service_demandeur, r.objet, r.priorite, r.adresse_livraison,
-         r.justification, r.observations, r.date_demande, r.statut;
-
--- Vue : taux de complétion du questionnaire par UPD (nb réponses / nb questions actives)
-CREATE OR REPLACE VIEW vue_completion_upd AS
-SELECT
-    i.id AS upd_id,
-    i.nom_upd,
-    i.departement,
-    i.statut_validation,
-    (SELECT COUNT(*) FROM upd_questions_catalogue WHERE actif = 1) AS total_questions,
-    (SELECT COUNT(*) FROM upd_reponses r
-        JOIN upd_questions_catalogue q ON q.id = r.question_id
-        WHERE r.upd_id = i.id AND q.actif = 1 AND r.valeur IS NOT NULL AND r.valeur <> '') AS questions_repondues
-FROM institutions_upd i;
-
--- Vue : taux de complétion du questionnaire par DDE
-CREATE OR REPLACE VIEW vue_completion_dde AS
-SELECT
-    d.id AS dde_id,
-    d.nom_dde,
-    d.departement,
-    d.statut_validation,
-    (SELECT COUNT(*) FROM dde_questions_catalogue WHERE actif = 1) AS total_questions,
-    (SELECT COUNT(*) FROM dde_reponses r
-        JOIN dde_questions_catalogue q ON q.id = r.question_id
-        WHERE r.dde_id = d.id AND q.actif = 1 AND r.valeur IS NOT NULL AND r.valeur <> '') AS questions_repondues
-FROM institutions_dde d;
 
 -- ============================================================================
 -- CHARGEMENT DU CATALOGUE DE QUESTIONS

@@ -151,6 +151,35 @@ function uep_ecrire_config(array $valeurs): bool
     return file_put_contents(FICHIER_CONFIG_LOCALE, implode("\n", $lignes), LOCK_EX) !== false;
 }
 
+/**
+ * Connexion à utiliser pendant l'installation : identifiants saisis à l'étape 2
+ * si la session les a conservés, sinon ceux déjà écrits dans config.local.php.
+ * Sans ce repli, une session expirée entre deux étapes obligeait à tout
+ * recommencer alors que la configuration était déjà correcte.
+ */
+function uep_connexion_installation(): PDO
+{
+    $bdd = Session::get('install_bdd');
+
+    if (is_array($bdd)) {
+        return uep_tester_connexion(
+            (string)$bdd['hote'],
+            (int)$bdd['port'],
+            (string)$bdd['base'],
+            (string)$bdd['utilisateur'],
+            (string)$bdd['mot_de_passe']
+        );
+    }
+
+    if (!uep_est_installee()) {
+        throw new RuntimeException(
+            'Identifiants de connexion introuvables : revenez à l\'étape 2 et saisissez-les de nouveau.'
+        );
+    }
+
+    return Database::pdo();
+}
+
 /** Ouvre une connexion PDO avec des identifiants donnés. */
 function uep_tester_connexion(string $hote, int $port, string $base, string $user, string $pass): PDO
 {
@@ -163,12 +192,36 @@ function uep_tester_connexion(string $hote, int $port, string $base, string $use
 }
 
 /**
+ * Une instruction SQL est-elle indispensable au fonctionnement de l'application ?
+ *
+ * Les hébergements mutualisés restreignent fortement les privilèges du compte
+ * MySQL qu'ils attribuent. Un refus sur un objet accessoire (vue, déclencheur,
+ * procédure) ne doit pas interrompre l'import et laisser la base à moitié
+ * installée ; un refus sur une table ou sur des données, si.
+ */
+function uep_instruction_essentielle(string $instruction): bool
+{
+    return !preg_match(
+        '/^\s*(CREATE\s+(OR\s+REPLACE\s+)?(ALGORITHM|DEFINER|SQL\s+SECURITY|VIEW|TRIGGER|PROCEDURE|FUNCTION|EVENT)'
+        . '|DROP\s+(VIEW|TRIGGER|PROCEDURE|FUNCTION|EVENT))\b/i',
+        $instruction
+    );
+}
+
+/** L'erreur PDO traduit-elle un privilège refusé par l'hébergeur ? */
+function uep_erreur_de_privilege(PDOException $e): bool
+{
+    // 1142 commande refusée · 1044 accès à la base refusé · 1227 privilège manquant
+    return in_array((int)($e->errorInfo[1] ?? 0), [1044, 1142, 1227], true);
+}
+
+/**
  * Exécute un fichier SQL instruction par instruction.
  * Le découpage ignore les points-virgules situés dans les chaînes littérales.
  *
- * @return int Nombre d'instructions exécutées.
+ * @return array{executees: int, ignorees: list<string>}
  */
-function uep_importer_sql(PDO $pdo, string $fichier): int
+function uep_importer_sql(PDO $pdo, string $fichier): array
 {
     $sql = file_get_contents($fichier);
     if ($sql === false) {
@@ -222,12 +275,24 @@ function uep_importer_sql(PDO $pdo, string $fichier): int
     }
 
     $executees = 0;
+    $ignorees = [];
+
     foreach ($instructions as $instruction) {
-        $pdo->exec($instruction);
-        $executees++;
+        try {
+            $pdo->exec($instruction);
+            $executees++;
+        } catch (PDOException $e) {
+            // Un privilege refuse sur un objet accessoire est signale, pas fatal.
+            if (!uep_instruction_essentielle($instruction) && uep_erreur_de_privilege($e)) {
+                $ignorees[] = trim(mb_substr((string)preg_replace('/\s+/', ' ', $instruction), 0, 80));
+                continue;
+            }
+
+            throw $e;
+        }
     }
 
-    return $executees;
+    return ['executees' => $executees, 'ignorees' => $ignorees];
 }
 
 // ---------------------------------------------------------------------------
@@ -283,23 +348,33 @@ if (!$verrouille && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // --- Étape 3 : import du schéma -------------------------------------
         if ($action === 'schema') {
-            $bdd = Session::get('install_bdd');
-            if (!is_array($bdd)) {
-                $erreurs[] = 'Identifiants perdus. Revenez à l\'étape précédente.';
-            } else {
-                try {
-                    $pdo = uep_tester_connexion($bdd['hote'], (int)$bdd['port'], $bdd['base'], $bdd['utilisateur'], $bdd['mot_de_passe']);
-                    $nombre = uep_importer_sql($pdo, RACINE_APP . '/database/schema.sql');
-                    $tables = (int)$pdo->query('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()')->fetchColumn();
-                    $questions = (int)$pdo->query('SELECT COUNT(*) FROM upd_questions_catalogue')->fetchColumn()
-                               + (int)$pdo->query('SELECT COUNT(*) FROM dde_questions_catalogue')->fetchColumn();
+            try {
+                // La session a pu expirer entre deux étapes : on retombe alors
+                // sur les identifiants déjà écrits dans config.local.php.
+                $pdo = uep_connexion_installation();
+                $resultat = uep_importer_sql($pdo, RACINE_APP . '/database/schema.sql');
 
-                    Session::set('install_resume', ['instructions' => $nombre, 'tables' => $tables, 'questions' => $questions]);
-                    header('Location: install.php?etape=4', true, 303);
-                    exit;
-                } catch (Throwable $e) {
-                    $erreurs[] = 'Import interrompu : ' . $e->getMessage();
-                }
+                $tables = (int)$pdo->query('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()')->fetchColumn();
+                $questions = (int)$pdo->query('SELECT COUNT(*) FROM upd_questions_catalogue')->fetchColumn()
+                           + (int)$pdo->query('SELECT COUNT(*) FROM dde_questions_catalogue')->fetchColumn();
+
+                Session::set('install_resume', [
+                    'instructions' => $resultat['executees'],
+                    'ignorees'     => $resultat['ignorees'],
+                    'tables'       => $tables,
+                    'questions'    => $questions,
+                ]);
+                header('Location: install.php?etape=4', true, 303);
+                exit;
+            } catch (PDOException $e) {
+                $erreurs[] = uep_erreur_de_privilege($e)
+                    ? 'Votre hébergeur refuse une commande nécessaire à l\'installation : '
+                      . $e->getMessage()
+                      . ' — vérifiez que l\'utilisateur MySQL a bien tous les droits sur CETTE base '
+                      . '(panneau de l\'hébergeur, rubrique des bases de données).'
+                    : 'Import interrompu : ' . $e->getMessage();
+            } catch (Throwable $e) {
+                $erreurs[] = 'Import interrompu : ' . $e->getMessage();
             }
         }
 
@@ -324,10 +399,7 @@ if (!$verrouille && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $erreurs = array_values($v->erreurs());
             } else {
                 try {
-                    $bdd = Session::get('install_bdd');
-                    $pdo = is_array($bdd)
-                        ? uep_tester_connexion($bdd['hote'], (int)$bdd['port'], $bdd['base'], $bdd['utilisateur'], $bdd['mot_de_passe'])
-                        : Database::pdo();
+                    $pdo = uep_connexion_installation();
 
                     $roleId = $pdo->query("SELECT id FROM roles WHERE nom_role = 'administrateur' LIMIT 1")->fetchColumn();
                     if ($roleId === false) {
@@ -533,8 +605,10 @@ $resume = Session::get('install_resume');
                             </span>
                         </div>
                         <p class="texte-discret">
-                            Le schéma installe 14 tables, 3 vues, ainsi que les 625 questions du questionnaire UPD
-                            et les 89 questions du questionnaire DDE. L'opération dure quelques secondes.
+                            Le schéma installe 14 tables, les 624 questions du questionnaire UPD et les
+                            89 questions du questionnaire DDE. Il n'utilise que <code>CREATE TABLE</code> et
+                            <code>INSERT</code>, les seules commandes qu'un hébergement mutualisé autorise
+                            toujours. L'opération dure quelques secondes.
                         </p>
                     </div>
                     <footer class="etape-actions">
@@ -555,10 +629,20 @@ $resume = Session::get('install_resume');
                             <div class="alerte alerte-succes">
                                 <i class="bi bi-check-circle-fill"></i>
                                 <span>
-                                    Base installée : <?= (int)$resume['tables'] ?> tables et vues,
+                                    Base installée : <?= (int)$resume['tables'] ?> tables,
                                     <?= (int)$resume['questions'] ?> questions chargées.
                                 </span>
                             </div>
+                            <?php if (!empty($resume['ignorees'])): ?>
+                                <div class="alerte alerte-avertissement">
+                                    <i class="bi bi-info-circle-fill"></i>
+                                    <span>
+                                        <?= count($resume['ignorees']) ?> instruction(s) accessoire(s) ont été
+                                        ignorées : votre hébergeur en refuse le privilège. L'application
+                                        fonctionne normalement sans elles.
+                                    </span>
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
 
                         <div class="grille-champs">

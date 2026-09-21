@@ -56,3 +56,16 @@ ALTER TABLE institutions_dde    ADD INDEX idx_institutions_dde_nom (nom_dde);
 -- 5. Purge de l'historique anti-bruteforce (débloque les comptes verrouillés)
 -- ----------------------------------------------------------------------------
 DELETE FROM tentatives_connexion;
+
+-- ----------------------------------------------------------------------------
+-- 6. Vues SQL devenues inutiles (facultatif)
+--    L'application n'utilise plus vue_requisitions_recap, vue_completion_upd
+--    ni vue_completion_dde : elles interrogent directement les tables. Ces vues
+--    n'existent que sur les installations où l'hébergeur autorisait CREATE VIEW.
+--    Décommentez ces trois lignes si vous souhaitez faire le ménage ; si votre
+--    hébergeur refuse DROP VIEW, laissez-les en commentaire, ces vues sont
+--    inoffensives.
+-- ----------------------------------------------------------------------------
+-- DROP VIEW IF EXISTS vue_requisitions_recap;
+-- DROP VIEW IF EXISTS vue_completion_upd;
+-- DROP VIEW IF EXISTS vue_completion_dde;

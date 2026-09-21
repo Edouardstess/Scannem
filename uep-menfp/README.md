@@ -7,7 +7,7 @@ Trois modules :
 
 | Module | Objet |
 |---|---|
-| **UPD** | Questionnaire des Universités Publiques Départementales — 625 questions, sections A à Q |
+| **UPD** | Questionnaire des Universités Publiques Départementales — 624 questions, sections A à Q |
 | **DDE** | Questionnaire des Directions Départementales d'Éducation — 89 questions, sections A à F |
 | **Réquisitions** | Demandes d'équipement informatique, électrique et logiciel, avec bon imprimable |
 
@@ -27,7 +27,7 @@ besoin est dans le dossier `htdocs/`.
    **directement** dans la racine web, pas dans un sous-dossier `htdocs/htdocs/`.
 3. **Ouvrir `https://votre-domaine/install.php`** dans un navigateur.
    L'assistant vérifie le serveur, teste la connexion MySQL, écrit la
-   configuration, crée les 17 tables et vues, charge les 714 questions des
+   configuration, crée les 14 tables, charge les 713 questions des
    questionnaires, puis crée votre compte administrateur.
 4. **Supprimer `install.php`** : l'assistant propose un bouton qui s'en charge.
 5. Se connecter sur `https://votre-domaine/login`.

@@ -16,7 +16,7 @@ if (defined('UEP_CONFIG_CHARGEE')) {
 }
 define('UEP_CONFIG_CHARGEE', true);
 
-define('APP_VERSION', '2.0.0');
+define('APP_VERSION', '2.0.1');
 define('RACINE_APP', dirname(__DIR__));
 define('RACINE_VIEWS', RACINE_APP . '/views');
 define('RACINE_STORAGE', RACINE_APP . '/storage');

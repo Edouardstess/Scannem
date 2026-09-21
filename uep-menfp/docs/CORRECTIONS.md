@@ -1,9 +1,77 @@
 # Version 2.0 — ce qui a été corrigé et vérifié
 
 Reconstruction complète du projet à partir de l'archive `Uep-corrige_1.zip`.
-Les modules, le modèle de données et les 714 questions des questionnaires sont
+Les modules, le modèle de données et les 713 questions des questionnaires sont
 conservés. Chaque correction ci-dessous a été reproduite avant d'être corrigée,
 puis vérifiée par un test automatisé.
+
+---
+
+## Version 2.0.1 — installation bloquée sur hébergement mutualisé
+
+### Symptôme
+
+À l'étape 3 de l'assistant, sur ByetHost :
+
+```
+Import interrompu : SQLSTATE[42000] 1142
+CREATE VIEW command denied to user 'b7_XXXXXXXX'@'…'
+for table `b7_XXXXXXXX_uep_menfp`.`vue_requisitions_recap`
+```
+
+### Cause
+
+Le schéma créait trois vues SQL de consolidation, héritées du script d'origine.
+Les hébergements mutualisés **n'accordent pas le privilège `CREATE VIEW`** au
+compte MySQL qu'ils attribuent.
+
+Le plus grave n'était pas le refus lui-même, mais sa position dans le fichier :
+les vues venaient **juste avant** le chargement des questionnaires. L'import
+s'arrêtait donc avec toutes les tables créées et **zéro question en base** — et
+l'application, une fois installée, n'affichait aucun formulaire.
+
+### Correction
+
+1. **Les trois vues sont supprimées du schéma.** Elles n'étaient utilisées nulle
+   part : les contrôleurs interrogent directement les tables, avec des requêtes
+   filtrées et paginées. Le schéma n'utilise plus que `CREATE TABLE` et
+   `INSERT`, les seules commandes qu'un hébergement mutualisé autorise toujours.
+
+2. **L'importateur ne s'arrête plus sur un objet accessoire.** Un privilège
+   refusé sur une vue, un déclencheur ou une procédure est désormais signalé
+   puis ignoré ; un refus sur une table ou sur des données reste fatal. Une base
+   ne peut plus se retrouver à moitié installée à cause d'une restriction
+   d'hébergeur. Vérifié en réimportant l'ancien schéma : les trois vues sont
+   écartées, les 713 questions sont bien chargées.
+
+3. **Message d'erreur explicite** en cas de privilège refusé, renvoyant vers les
+   droits du compte MySQL plutôt que vers le message brut de PDO.
+
+4. **Reprise après interruption.** Si la session expire entre deux étapes,
+   l'assistant repart des identifiants déjà écrits dans `config.local.php` au
+   lieu d'exiger de tout recommencer.
+
+### Vérification
+
+Reproduction fidèle de l'environnement ByetHost : compte MySQL disposant de
+`SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, REFERENCES,
+LOCK TABLES` et **d'aucun privilège sur les vues**.
+
+| | Ancien schéma | Nouveau schéma |
+|---|---|---|
+| Import | interrompu sur `1142` | **terminé** |
+| Tables | 14 | 14 |
+| Questions chargées | **0** | **713** |
+
+Sur cette base volontairement bridée : installation complète par l'assistant,
+**90 tests fonctionnels** et **28 tests d'interface au vert**, journal
+d'erreurs vide.
+
+### Décomptes rectifiés
+
+La documentation annonçait 625 questions UPD et 714 au total. Les valeurs
+exactes, relevées en base, sont **624 questions UPD**, **89 questions DDE**,
+soit **713 au total**, réparties dans **14 tables**.
 
 ---
 
@@ -123,7 +191,7 @@ pagination de 25 lignes (50 pour le journal) sur toutes les listes.
 
 La validation serveur produisait un message par question, mais l'affichage se
 contentait d'un « le formulaire contient N erreur(s) » : aucun champ n'était
-signalé, et avec 625 questions réparties sur 17 sections, la question fautive
+signalé, et avec 624 questions réparties sur 17 sections, la question fautive
 était introuvable.
 
 Chaque champ en erreur est désormais encadré en rouge avec son message, et le
@@ -258,7 +326,7 @@ mobile, absence de défilement horizontal à 390 px, **aucune erreur JavaScript*
 - **Assistant d'installation** : parcours complet validé, identifiants erronés
   refusés avec le message de MySQL, mot de passe faible refusé, verrouillage
   après création de l'administrateur.
-- **Import SQL** : 17 tables et vues, 624 questions UPD, 89 questions DDE,
+- **Import SQL** : 14 tables, 624 questions UPD, 89 questions DDE,
   aucune erreur.
 - **Lint PHP** : aucune erreur de syntaxe sur les 55 fichiers.
 - **Journal applicatif** : vide après l'ensemble des campagnes de tests —

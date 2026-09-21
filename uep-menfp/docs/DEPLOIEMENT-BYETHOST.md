@@ -92,7 +92,7 @@ Ouvrez `http://votre-domaine.byethost7.com/install.php`.
 |---|---|
 | 1. Vérification du serveur | Version de PHP, extensions, droits d'écriture, `mod_rewrite` |
 | 2. Connexion à la base | Test des identifiants, puis écriture de `config/config.local.php` |
-| 3. Création des tables | 14 tables, 3 vues, 625 questions UPD et 89 questions DDE |
+| 3. Création des tables | 14 tables, 624 questions UPD et 89 questions DDE |
 | 4. Compte administrateur | Votre nom, votre adresse, votre mot de passe |
 | 5. Terminé | Bouton de suppression de l'assistant |
 
@@ -165,6 +165,26 @@ présence du fichier (voir § 3), puis l'option *Apache mod_rewrite* du panneau.
 `AllowOverride` est probablement restreint, ou le `.htaccess` a été altéré au
 transfert. Renvoyez-le en mode **binaire** (et non ASCII) depuis votre client
 FTP.
+
+### « CREATE VIEW command denied » pendant l'import
+
+Cette erreur n'existe plus depuis la version 2.0.1 : le schéma ne crée aucune
+vue SQL, précisément parce que les hébergements mutualisés refusent ce
+privilège. Si vous la voyez encore, c'est que le dossier `database/` téléversé
+date d'une version antérieure — renvoyez-le.
+
+Après une erreur d'import, la base contient les tables mais **aucune
+question** : l'import s'était arrêté en chemin. Relancez simplement
+`install.php` à l'étape 3, le schéma repart de zéro (il supprime les tables
+avant de les recréer).
+
+### « Command denied » sur une autre commande
+
+Relevez le nom de la commande refusée et vérifiez, dans le panneau de
+l'hébergeur, que votre utilisateur MySQL dispose bien de **tous les droits sur
+cette base**. L'application n'a besoin que de `SELECT`, `INSERT`, `UPDATE`,
+`DELETE`, `CREATE`, `DROP`, `INDEX` et `ALTER` — le jeu standard attribué par
+défaut.
 
 ### « Connexion à la base de données impossible »
 
