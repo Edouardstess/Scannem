@@ -13,6 +13,9 @@
 /storage/private/*.sqlite-*
 /storage/logs/*
 /storage/private/.installed
+# Keep the (empty) directory structure in the repository and the archive.
+!/storage/private/*/.gitkeep
+!/storage/logs/.gitkeep
 
 # Uploaded public images (portfolio, services, branding).
 /public/assets/uploads/*
