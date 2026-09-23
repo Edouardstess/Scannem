@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Config;
+use App\Core\Environment;
 use App\Core\Logger;
 use App\Exceptions\StorageException;
 
@@ -329,6 +330,17 @@ final class ImageProcessingService
     {
         $info = @getimagesize($path);
         $mime = is_array($info) ? (string) ($info['mime'] ?? '') : '';
+
+        if (is_array($info) && !Environment::ensureMemoryForImage((int) $info[0], (int) $info[1])) {
+            throw new StorageException(sprintf(
+                'Image trop grande pour la mémoire du serveur (%d × %d px, %.0f Mpx). '
+                . 'Limite ici : environ %.0f Mpx — réduisez la photo avant de l\'importer.',
+                (int) $info[0],
+                (int) $info[1],
+                ((int) $info[0] * (int) $info[1]) / 1_000_000,
+                Environment::maxImageMegapixels()
+            ));
+        }
 
         $image = match ($mime) {
             'image/jpeg' => @imagecreatefromjpeg($path),

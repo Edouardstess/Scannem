@@ -104,6 +104,11 @@ Le seeder crée un photographe, deux clients, deux événements, une galerie de
 12 photographies (générées, aucune personne réelle), un portfolio et trois
 prestations. Il affiche les deux liens de la galerie et son mot de passe.
 
+### Sur ByetHost (hébergement gratuit)
+
+Guide pas à pas, limites de l'offre gratuite (10 Mo par photo, e-mails
+restreints) et dépannage : [`docs/byethost.md`](docs/byethost.md).
+
 Documentation complète : [`docs/installation.md`](docs/installation.md).
 
 ---
@@ -177,7 +182,7 @@ php tests/run.php              # tout
 php tests/run.php TokenTest    # une classe
 ```
 
-191 tests, 472 assertions, aucune dépendance externe. Les tests critiques
+197 tests, 488 assertions, aucune dépendance externe. Les tests critiques
 vérifient notamment :
 
 | Ce qui est vérifié | Où |
@@ -198,6 +203,7 @@ vérifient notamment :
 | Régénérer un lien tue immédiatement le précédent | `ShareTest` |
 | Aucun script inline que la CSP bloquerait dans le navigateur | `CspTest` |
 | Les recherches fonctionnent aussi sous MySQL (paramètres répétés) | `PlaceholderTest` |
+| Un envoi trop lourd est expliqué, jamais pris pour une session expirée | `EnvironmentTest` |
 
 Les tests automatisés tournent sur SQLite. L'application a en plus été
 validée de bout en bout sur **Apache 2.4.58 (mod_rewrite, installation en

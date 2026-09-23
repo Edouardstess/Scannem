@@ -295,6 +295,16 @@ final class Request
             || str_contains((string) $this->header('Accept'), 'application/json');
     }
 
+    /** True when PHP discarded the body for exceeding post_max_size. */
+    public function bodyWasDropped(): bool
+    {
+        return Environment::postBodyWasDropped(
+            ['REQUEST_METHOD' => $this->method] + $this->server,
+            $this->body,
+            $this->files
+        );
+    }
+
     public function isSecure(): bool
     {
         if (($this->server['HTTPS'] ?? 'off') !== 'off' && ($this->server['HTTPS'] ?? '') !== '') {

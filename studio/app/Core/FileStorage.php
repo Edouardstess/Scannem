@@ -227,6 +227,10 @@ final class FileStorage
 
     public function freeSpaceBytes(): float
     {
+        if (!Environment::functionAvailable('disk_free_space')) {
+            return 0.0;
+        }
+
         $free = @disk_free_space($this->root);
 
         return $free === false ? 0.0 : $free;

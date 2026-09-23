@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Core\Config;
 use App\Core\Database;
+use App\Core\Environment;
 use App\Core\Logger;
 use App\Exceptions\UploadException;
 use App\Models\VariantType;
@@ -328,7 +329,10 @@ final class PhotoUploadService
         }
 
         throw new UploadException(match ($error) {
-            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Le fichier dépasse la taille maximale autorisée.',
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => sprintf(
+                'Le fichier dépasse la taille maximale acceptée par le serveur (%s).',
+                format_bytes(Environment::uploadLimitBytes((int) Config::get('storage.max_upload_bytes')))
+            ),
             UPLOAD_ERR_PARTIAL    => 'Le fichier n\'a été que partiellement envoyé. Réessayez.',
             UPLOAD_ERR_NO_FILE    => 'Aucun fichier reçu.',
             UPLOAD_ERR_NO_TMP_DIR => 'Répertoire temporaire manquant sur le serveur.',

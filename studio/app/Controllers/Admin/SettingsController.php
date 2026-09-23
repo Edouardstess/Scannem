@@ -133,6 +133,8 @@ final class SettingsController extends Controller
         $usage = $this->storage->usage();
 
         $installer = dirname(__DIR__, 3) . '/public/install.php';
+        $uploadLimit = \App\Core\Environment::uploadLimitBytes((int) Config::get('storage.max_upload_bytes'));
+        $megapixels = \App\Core\Environment::maxImageMegapixels();
 
         return [
             [
@@ -197,13 +199,33 @@ final class SettingsController extends Controller
             ],
             [
                 'label'    => 'Taille maximale par fichier',
-                'ok'       => true,
+                // Below ~20 MB, straight-from-camera originals get refused.
+                'ok'       => $uploadLimit >= 20 * 1024 * 1024,
                 'detail'   => sprintf(
-                    'Application %s · PHP upload_max_filesize %s · post_max_size %s',
+                    'Effective %s (application %s · PHP upload_max_filesize %s · post_max_size %s)%s',
+                    format_bytes($uploadLimit),
                     format_bytes((int) Config::get('storage.max_upload_bytes')),
                     (string) ini_get('upload_max_filesize'),
-                    (string) ini_get('post_max_size')
+                    (string) ini_get('post_max_size'),
+                    $uploadLimit < 20 * 1024 * 1024 ? ' — exportez les photos en JPEG réduit avant import.' : ''
                 ),
+                'critical' => false,
+            ],
+            [
+                'label'    => 'Mémoire pour le traitement des images',
+                'ok'       => $megapixels >= 24,
+                'detail'   => sprintf(
+                    'memory_limit %s · images jusqu\'à environ %s mégapixels',
+                    (string) ini_get('memory_limit'),
+                    is_finite($megapixels) ? (string) (int) $megapixels : 'illimité'
+                ),
+                'critical' => false,
+            ],
+            [
+                'label'    => 'Envoi d\'e-mails',
+                'ok'       => \App\Core\Environment::functionAvailable('mail') || \App\Core\Environment::functionAvailable('fsockopen'),
+                'detail'   => 'Pilote ' . (string) Config::get('mail.driver', 'log')
+                    . ' — sur un hébergement gratuit, les e-mails peuvent être bloqués : copiez les liens depuis la page « Partager ».',
                 'critical' => false,
             ],
         ];

@@ -27,7 +27,9 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
         }
 
         // PHP advertises its version by default; that is free reconnaissance.
-        header_remove('X-Powered-By');
+        if (\App\Core\Environment::functionAvailable('header_remove')) {
+            header_remove('X-Powered-By');
+        }
 
         return null;
     }

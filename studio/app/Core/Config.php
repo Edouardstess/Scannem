@@ -67,7 +67,10 @@ final class Config
                 continue;
             }
 
-            putenv($key . '=' . $value);
+            if (Environment::functionAvailable('putenv')) {
+                putenv($key . '=' . $value);
+            }
+
             $_ENV[$key] = $value;
         }
     }

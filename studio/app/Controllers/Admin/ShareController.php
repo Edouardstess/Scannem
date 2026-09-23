@@ -109,7 +109,7 @@ final class ShareController extends Controller
 
         $sent
             ? $this->flashSuccess('E-mail envoyé à ' . $recipient . '.')
-            : $this->flashError("L'e-mail n'a pas pu être envoyé. Vérifiez la configuration SMTP.");
+            : $this->flashError("L'e-mail n'a pas pu être envoyé (l'hébergeur bloque peut-être l'envoi). Copiez les liens ci-dessous et transmettez-les vous-même : e-mail, SMS ou WhatsApp.");
 
         return $this->back($request, $back);
     }

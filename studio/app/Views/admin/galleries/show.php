@@ -56,15 +56,21 @@ $coverId = (int) ($gallery['cover_photo_id'] ?? 0);
     <div class="tile"><span class="tile__value"><?= e(format_bytes((int) $stats['total_bytes'])) ?></span><span class="tile__label">Poids total</span></div>
 </section>
 
+<?php
+// The real ceiling: the host's upload_max_filesize / post_max_size can be far
+// below the application setting (10 MB on free hosting).
+$uploadLimit = \App\Core\Environment::uploadLimitBytes((int) config('storage.max_upload_bytes'));
+?>
 <section class="panel">
     <header class="panel__head">
         <h2 class="panel__title">Ajouter des photographies</h2>
         <span class="panel__hint">
-            JPG, PNG, WEBP, TIFF, HEIC · <?= e(format_bytes((int) config('storage.max_upload_bytes'))) ?> max par fichier
+            JPG, PNG, WEBP, TIFF, HEIC · <?= e(format_bytes($uploadLimit)) ?> max par fichier
         </span>
     </header>
 
     <div class="uploader" data-uploader
+         data-max-bytes="<?= (int) $uploadLimit ?>"
          data-endpoint="<?= e(url('/admin/galleries/' . $galleryId . '/photos')) ?>"
          data-csrf="<?= e(csrf_token()) ?>">
 

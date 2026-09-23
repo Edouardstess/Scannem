@@ -38,9 +38,9 @@ final class Session
             'samesite' => (string) Config::get('security.session_samesite', 'Lax'),
         ]);
 
-        ini_set('session.use_strict_mode', '1');
-        ini_set('session.use_only_cookies', '1');
-        ini_set('session.gc_maxlifetime', (string) Config::get('security.session_lifetime', 7200));
+        Environment::iniSet('session.use_strict_mode', '1');
+        Environment::iniSet('session.use_only_cookies', '1');
+        Environment::iniSet('session.gc_maxlifetime', (string) Config::get('security.session_lifetime', 7200));
 
         session_start();
         self::$started = true;

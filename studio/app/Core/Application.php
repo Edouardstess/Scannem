@@ -59,8 +59,8 @@ final class Application
         $debug = (bool) Config::get('app.debug');
 
         error_reporting(E_ALL);
-        ini_set('display_errors', $debug ? '1' : '0');
-        ini_set('log_errors', '1');
+        Environment::iniSet('display_errors', $debug ? '1' : '0');
+        Environment::iniSet('log_errors', '1');
 
         set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
             if ((error_reporting() & $severity) === 0) {

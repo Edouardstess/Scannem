@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Config;
+use App\Core\Environment;
 use App\Core\Logger;
 
 /**
@@ -68,6 +69,12 @@ final class MailService
     private function sendNative(string $to, string $subject, string $body, ?string $replyTo): bool
     {
         $headers = implode("\r\n", $this->headerLines($replyTo));
+
+        if (!Environment::functionAvailable('mail')) {
+            Logger::error('mail() is disabled on this server; set MAIL_DRIVER=smtp or share links by hand');
+
+            return false;
+        }
 
         return @mail($to, $this->encodeSubject($subject), $body, $headers);
     }
@@ -134,6 +141,12 @@ final class MailService
         }
 
         $transport = $encryption === 'ssl' ? 'ssl://' . $host : $host;
+        if (!Environment::functionAvailable('fsockopen')) {
+            Logger::error('fsockopen() is disabled on this server; SMTP is unavailable');
+
+            return false;
+        }
+
         $socket = @fsockopen($transport, $port, $errno, $errstr, $timeout);
 
         if ($socket === false) {

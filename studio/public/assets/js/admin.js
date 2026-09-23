@@ -127,6 +127,7 @@
         var bar = container.querySelector('[data-upload-bar]');
         var status = container.querySelector('[data-upload-status]');
         var totalCounter = document.querySelector('[data-photo-total]');
+        var maxBytes = parseInt(container.getAttribute('data-max-bytes') || '0', 10);
 
         var pending = [];
         var completed = 0;
@@ -170,6 +171,15 @@
         function enqueue(files) {
             Array.prototype.slice.call(files).forEach(function (file) {
                 var item = { file: file, row: buildRow(file), attempts: 0 };
+
+                // Refused before sending: the server would drop it anyway, and
+                // only after the whole file had crossed the network.
+                if (maxBytes > 0 && file.size > maxBytes) {
+                    markFailed(item, 'trop lourde (' + megabytes(file.size) + ', maximum ' + megabytes(maxBytes)
+                        + ') — réduisez-la puis importez-la à nouveau', false);
+                    return;
+                }
+
                 pending.push(item);
             });
 
@@ -241,6 +251,11 @@
                 .then(function (response) {
                     return response.json().then(function (data) {
                         return { ok: response.ok, data: data };
+                    }, function () {
+                        // Not JSON: the web server itself refused the request.
+                        return { ok: false, data: { error: response.status === 413
+                            ? 'fichier trop volumineux pour le serveur'
+                            : 'erreur du serveur (' + response.status + ')' } };
                     });
                 })
                 .then(function (result) {
@@ -276,7 +291,11 @@
                 });
         }
 
-        function markFailed(item, message) {
+        function megabytes(bytes) {
+            return (bytes / 1048576).toFixed(1).replace('.', ',') + ' Mo';
+        }
+
+        function markFailed(item, message, retryable) {
             failed += 1;
             item.row.element.classList.add('is-failed');
             item.row.state.textContent = '';
@@ -284,6 +303,11 @@
             var label = document.createElement('span');
             label.textContent = message + ' ';
             item.row.state.appendChild(label);
+
+            if (retryable === false) {
+                render();
+                return;
+            }
 
             var retry = document.createElement('button');
             retry.type = 'button';
