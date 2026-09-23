@@ -1,0 +1,35 @@
+# Root .htaccess.
+#
+# Two jobs:
+#   1. Refuse direct access to everything that is not public/.
+#   2. Forward requests into public/ for hosts where the document root cannot
+#      be pointed at public/ — which is most cheap shared hosting.
+#
+# Pointing the document root at public/ remains the correct setup. This file
+# is the fallback, not a replacement for it.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block the application's internals outright, whatever the rewrite below
+    # would otherwise do with them.
+    RewriteRule ^(app|config|database|routes|storage|tests|vendor|docs|bin)(/|$) - [F,L]
+    RewriteRule ^(\.env|\.env\..*|composer\.(json|lock)|phpunit\.xml|README\.md)$ - [F,L]
+
+    # Serve everything through public/.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Belt and braces for hosts without mod_rewrite.
+<FilesMatch "^(\.env|\.env\..*|composer\.json|composer\.lock|phpunit\.xml)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

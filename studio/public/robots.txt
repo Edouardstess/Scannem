@@ -1,0 +1,9 @@
+# Served dynamically by SitemapController at /robots.txt.
+# This static copy is the fallback when the rewrite rules are not active.
+User-agent: *
+Disallow: /admin
+Disallow: /gallery/
+Disallow: /download/
+Disallow: /media/
+Disallow: /espace-client
+Allow: /

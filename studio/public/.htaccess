@@ -1,0 +1,53 @@
+# Front controller and hardening for the public directory.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Works when the application is installed in a subdirectory as well as at
+    # the document root.
+    RewriteBase /
+
+    # Never rewrite a request that already points at a real file (assets) or
+    # directory; everything else becomes a route.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    # PHP sends the rest of the security headers per response; these two are
+    # here so that static files carry them too.
+</IfModule>
+
+# Long-lived caching for fingerprint-free static assets, revalidated by ETag.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType font/woff2 "access plus 365 days"
+</IfModule>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# Directory listings would expose the asset tree.
+Options -Indexes
+
+# Dotfiles are never content.
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

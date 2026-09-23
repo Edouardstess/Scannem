@@ -1,0 +1,23 @@
+/vendor/
+/node_modules/
+.env
+.env.*
+!.env.example
+
+# Client photographs and everything derived from them.
+/storage/private/originals/*
+/storage/private/previews/*
+/storage/private/thumbnails/*
+/storage/private/temporary/*
+/storage/private/*.sqlite
+/storage/private/*.sqlite-*
+/storage/logs/*
+
+# Uploaded public images (portfolio, services, branding).
+/public/assets/uploads/*
+!/public/assets/uploads/.gitkeep
+
+*.log
+.DS_Store
+Thumbs.db
+.phpunit.result.cache

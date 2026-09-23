@@ -1,0 +1,222 @@
+/* =========================================================================
+   Client gallery: grid, lightbox, download UI.
+   Loaded only on /gallery and /download pages.
+   ========================================================================= */
+
+.client { background: var(--color-background); }
+
+.client-header {
+    position: sticky; top: 0; z-index: 80;
+    background: color-mix(in srgb, var(--color-background) 94%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--color-border);
+}
+.client-header__inner {
+    max-width: var(--wrap); margin: 0 auto; padding: var(--space-2) var(--space-3);
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+}
+.client-header__brand { text-decoration: none; }
+.client-header__wordmark { font-family: var(--font-serif); font-size: 1.3rem; }
+.client-header__logo { max-height: 34px; width: auto; }
+.client-header__count { font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-muted); }
+
+.client-main { min-height: 60vh; }
+.client-footer {
+    margin-top: var(--space-5); padding: var(--space-3);
+    text-align: center; font-size: 0.8rem; color: var(--color-muted);
+    border-top: 1px solid var(--color-border);
+}
+
+/* --- Password gate ------------------------------------------------------ */
+
+.gate { display: grid; place-items: center; min-height: 70vh; padding: var(--space-4) var(--space-3); }
+.gate__panel {
+    width: 100%; max-width: 420px; padding: var(--space-4);
+    background: var(--color-surface); border: 1px solid var(--color-border); text-align: center;
+}
+.gate__panel--message { max-width: 520px; }
+.gate__eyebrow { margin: 0 0 var(--space-1); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-muted); }
+.gate__title { font-family: var(--font-serif); font-size: var(--step-2); }
+.gate__text { color: var(--color-muted); margin: 0 0 var(--space-3); }
+.gate__text--muted { font-size: 0.86rem; }
+.gate__form { display: grid; gap: var(--space-2); text-align: left; }
+.gate__error { margin: 0; color: var(--color-error); font-size: 0.85rem; }
+
+/* --- Gallery head ------------------------------------------------------- */
+
+.gallery-head { padding: var(--space-5) 0 var(--space-3); }
+.gallery-head__client { margin: 0 0 var(--space-1); font-size: 0.78rem; letter-spacing: 0.3em; color: var(--color-muted); }
+.gallery-head__title { font-family: var(--font-serif); font-size: var(--step-3); font-weight: 300; }
+.gallery-head__meta {
+    display: flex; flex-wrap: wrap; gap: var(--space-2);
+    margin: 0 0 var(--space-2); font-size: 0.82rem; color: var(--color-muted);
+}
+.gallery-head__meta span:not(:last-child)::after { content: ' ·'; }
+.gallery-head__text { max-width: 60ch; color: var(--color-muted); }
+.gallery-head__hint, .gallery-head__notice {
+    max-width: 62ch; margin-top: var(--space-2); padding: 0.85rem 1.1rem;
+    background: var(--color-surface); border-left: 3px solid var(--color-accent); font-size: 0.88rem;
+}
+.gallery-head__selection { font-weight: 600; }
+
+/* --- Photo grid --------------------------------------------------------- */
+
+.gallery-body { padding-bottom: var(--space-5); }
+
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+    gap: var(--space-2);
+}
+
+.photo {
+    position: relative; margin: 0; overflow: hidden;
+    background: var(--color-surface-alt); border-radius: var(--radius);
+}
+
+.photo__button {
+    display: block; width: 100%; padding: 0; margin: 0;
+    background: none; border: 0; cursor: zoom-in;
+}
+.photo__image {
+    width: 100%; aspect-ratio: var(--ratio, 3 / 2); object-fit: cover;
+    transition: transform 500ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity var(--transition);
+}
+.photo__button:hover .photo__image { transform: scale(1.035); }
+
+/* Overlay controls stay visible on touch, where there is no hover. */
+.photo__favourite, .photo__download, .photo__check {
+    position: absolute; z-index: 2;
+    display: grid; place-items: center;
+    width: 38px; height: 38px;
+    background: rgba(255, 255, 255, 0.92); border: 0; border-radius: 50%;
+    cursor: pointer; opacity: 0; transition: opacity var(--transition), transform var(--transition);
+    color: var(--color-primary); text-decoration: none; font-size: 1rem;
+}
+.photo:hover .photo__favourite,
+.photo:hover .photo__download,
+.photo:hover .photo__check,
+.photo:focus-within .photo__favourite,
+.photo:focus-within .photo__download,
+.photo:focus-within .photo__check { opacity: 1; }
+
+@media (hover: none) {
+    .photo__favourite, .photo__download, .photo__check { opacity: 1; }
+}
+
+.photo__favourite { top: 10px; right: 10px; }
+.photo__download { top: 10px; right: 56px; }
+.photo__check { top: 10px; left: 10px; background: none; }
+
+.photo__favourite[aria-pressed="true"] { background: var(--color-accent); color: #fff; }
+.photo.is-favourite { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+.photo__checkbox { position: absolute; opacity: 0; width: 38px; height: 38px; margin: 0; cursor: pointer; }
+.photo__check-box {
+    width: 24px; height: 24px; border-radius: 4px;
+    background: rgba(255, 255, 255, 0.92); border: 1px solid rgba(0, 0, 0, 0.25);
+}
+.photo__checkbox:checked ~ .photo__check-box {
+    background: var(--color-accent); border-color: var(--color-accent);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.5'%3E%3Cpath d='M3 8.5l3.5 3.5L13 5'/%3E%3C/svg%3E");
+    background-size: 16px; background-position: center; background-repeat: no-repeat;
+}
+.photo__checkbox:focus-visible ~ .photo__check-box { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.photo__checkbox:disabled ~ .photo__check-box { opacity: 0.35; cursor: not-allowed; }
+.photo.is-selected { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+.gallery-more { margin-top: var(--space-4); text-align: center; }
+
+/* --- Download UI -------------------------------------------------------- */
+
+.download-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+
+.download-progress { margin-top: var(--space-3); max-width: 520px; }
+.download-progress__label { margin: 0 0 0.4rem; font-size: 0.85rem; color: var(--color-muted); }
+.download-progress__track { height: 4px; background: var(--color-border); border-radius: 999px; overflow: hidden; }
+.download-progress__bar {
+    height: 100%; width: 0; background: var(--color-accent);
+    transition: width 240ms ease;
+}
+
+.download-selection {
+    position: sticky; bottom: 0; z-index: 60;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2);
+    margin-top: var(--space-3); padding: var(--space-2);
+    background: var(--color-primary); color: #fff; border-radius: var(--radius);
+}
+.download-selection__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.download-selection .button { background: #fff; color: var(--color-primary); border-color: #fff; }
+.download-selection .button--ghost { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.55); }
+.download-selection .button--ghost:hover { background: #fff; color: var(--color-primary); }
+
+/* --- Lightbox ----------------------------------------------------------- */
+
+.lightbox {
+    position: fixed; inset: 0; z-index: 200;
+    display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto 1fr auto;
+    background: rgba(12, 11, 10, 0.97);
+    color: #fff;
+}
+.lightbox[hidden] { display: none; }
+
+.lightbox__bar {
+    grid-column: 1 / -1; grid-row: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-2) var(--space-3);
+}
+.lightbox__counter { font-size: 0.8rem; letter-spacing: 0.14em; color: rgba(255, 255, 255, 0.72); }
+.lightbox__tools { display: flex; gap: 0.35rem; }
+.lightbox__tool {
+    display: grid; place-items: center; width: 44px; height: 44px;
+    background: none; border: 0; color: #fff; font-size: 1.2rem;
+    cursor: pointer; border-radius: 50%; text-decoration: none;
+    transition: background var(--transition);
+}
+.lightbox__tool:hover { background: rgba(255, 255, 255, 0.12); }
+.lightbox__tool[aria-pressed="true"] { background: rgba(255, 255, 255, 0.2); }
+.lightbox__tool[hidden] { display: none; }
+
+.lightbox__stage {
+    grid-column: 2; grid-row: 2;
+    display: grid; place-items: center; overflow: auto; padding: 0 var(--space-2);
+}
+.lightbox__image {
+    max-width: 100%; max-height: calc(100vh - 170px);
+    object-fit: contain; transition: opacity 200ms ease, transform 200ms ease;
+}
+.lightbox.is-loading .lightbox__image { opacity: 0.35; }
+.lightbox.is-zoomed .lightbox__stage { cursor: zoom-out; }
+.lightbox.is-zoomed .lightbox__image { max-width: none; max-height: none; transform: scale(1.9); }
+
+.lightbox__spinner {
+    position: absolute; width: 28px; height: 28px;
+    border: 2px solid rgba(255, 255, 255, 0.25); border-top-color: #fff; border-radius: 50%;
+    animation: lightbox-spin 700ms linear infinite;
+}
+.lightbox__spinner[hidden] { display: none; }
+@keyframes lightbox-spin { to { transform: rotate(360deg); } }
+
+.lightbox__nav {
+    grid-row: 2; align-self: center;
+    width: 56px; height: 56px; margin: 0 var(--space-1);
+    background: rgba(255, 255, 255, 0.08); border: 0; border-radius: 50%;
+    color: #fff; font-size: 1.7rem; line-height: 1; cursor: pointer;
+    transition: background var(--transition);
+}
+.lightbox__nav:hover { background: rgba(255, 255, 255, 0.2); }
+.lightbox__nav--prev { grid-column: 1; }
+.lightbox__nav--next { grid-column: 3; }
+
+.lightbox__caption {
+    grid-column: 1 / -1; grid-row: 3;
+    margin: 0; padding: var(--space-2) var(--space-3);
+    text-align: center; font-size: 0.85rem; color: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 640px) {
+    .lightbox__nav { width: 44px; height: 44px; font-size: 1.4rem; margin: 0; }
+    .lightbox__image { max-height: calc(100vh - 150px); }
+}
+
+body.is-locked { overflow: hidden; }
