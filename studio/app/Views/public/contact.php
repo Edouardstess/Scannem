@@ -117,6 +117,7 @@ View::startSection('content');
                 <?php if (($settings['contact_address'] ?? '') !== ''): ?>
                     <p class="contact-aside__row">
                         <span>Adresse</span> <?= e((string) $settings['contact_address']) ?>
+                        <a class="link-arrow" href="#localisation">Voir sur la carte</a>
                     </p>
                 <?php endif; ?>
                 <?php if (!empty($settings['booking_enabled'])): ?>
@@ -130,5 +131,7 @@ View::startSection('content');
         </div>
     </div>
 </section>
+
+<?= View::include('partials.map', ['settings' => $settings, 'headingLevel' => 'h2']) ?>
 
 <?php View::endSection(); ?>

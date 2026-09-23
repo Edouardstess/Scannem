@@ -70,6 +70,8 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
             "script-src 'self'",
             "img-src 'self' data: blob:",
             "connect-src 'self'",
+            // The location map is Google's embed; nothing else may be framed.
+            "frame-src https://www.google.com https://maps.google.com",
             "frame-ancestors 'self'",
             "form-action 'self'",
             "base-uri 'self'",

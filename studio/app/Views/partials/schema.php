@@ -54,6 +54,21 @@ if (($settings['contact_phone'] ?? '') !== '') {
 if (($settings['contact_address'] ?? '') !== '') {
     $business['address'] = ['@type' => 'PostalAddress', 'streetAddress' => (string) $settings['contact_address']];
 }
+
+// Lets Google tie the site to the place on Maps.
+$map = new \App\Services\MapService($settings);
+
+if (($mapUrl = $map->searchUrl()) !== null) {
+    $business['hasMap'] = $mapUrl;
+}
+
+if (($coordinates = $map->coordinates()) !== null) {
+    $business['geo'] = [
+        '@type'     => 'GeoCoordinates',
+        'latitude'  => $coordinates['lat'],
+        'longitude' => $coordinates['lng'],
+    ];
+}
 ?>
 <script type="application/ld+json"><?= ejs($person) ?></script>
 <script type="application/ld+json"><?= ejs($business) ?></script>

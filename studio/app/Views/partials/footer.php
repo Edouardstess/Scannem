@@ -40,6 +40,11 @@ $socials = array_filter([
             <?php if ($address !== ''): ?>
                 <p><?= e($address) ?></p>
             <?php endif; ?>
+            <?php if (($directions = (new \App\Services\MapService($settings))->directionsUrl()) !== null): ?>
+                <p>
+                    <a href="<?= e($directions) ?>" target="_blank" rel="noopener noreferrer">Itinéraire Google Maps</a>
+                </p>
+            <?php endif; ?>
         </div>
 
         <div class="site-footer__column">

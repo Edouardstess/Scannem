@@ -74,6 +74,33 @@
         }
     });
 
+    /* --- Location map loaded on demand (map_click_to_load) -------------- */
+
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-map-load]');
+
+        if (!button) {
+            return;
+        }
+
+        var facade = button.closest('[data-map-facade]');
+        var src = facade ? facade.getAttribute('data-src') || '' : '';
+
+        // The server only ever renders Google's embed; refuse anything else.
+        if (src.indexOf('https://www.google.com/maps') !== 0) {
+            return;
+        }
+
+        var frame = document.createElement('iframe');
+        frame.className = 'location__frame';
+        frame.src = src;
+        frame.title = facade.getAttribute('data-title') || 'Carte';
+        frame.setAttribute('allowfullscreen', '');
+        frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+
+        facade.replaceWith(frame);
+    });
+
     /* --- Portfolio lightbox --------------------------------------------- */
 
     var lightboxLinks = Array.prototype.slice.call(document.querySelectorAll('[data-lightbox]'));

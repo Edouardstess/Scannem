@@ -190,6 +190,10 @@ $process = is_array($settings['process_steps'] ?? null) ? $settings['process_ste
     </section>
 <?php endif; ?>
 
+<?php if ((new \App\Services\MapService($settings))->showOnHome()): ?>
+    <?= View::include('partials.map', ['settings' => $settings, 'headingLevel' => 'h2']) ?>
+<?php endif; ?>
+
 <section class="cta">
     <div class="wrap wrap--narrow">
         <h2 class="cta__title">Parlons de votre projet</h2>

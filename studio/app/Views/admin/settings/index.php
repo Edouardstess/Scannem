@@ -157,6 +157,72 @@ $value = static function (string $key) use ($values): string {
         </div>
     </fieldset>
 
+    <?php $map = new \App\Services\MapService($values); ?>
+    <fieldset class="fieldset" id="localisation">
+        <legend class="fieldset__legend">Localisation (Google Maps)</legend>
+
+        <div class="field">
+            <label for="map_query">Où vous trouver</label>
+            <input type="text" id="map_query" name="map_query" maxlength="255"
+                   value="<?= e($value('map_query')) ?>"
+                   placeholder="<?= e((string) ($values['contact_address'] ?? '') ?: 'Ex. : 12 rue Capois, Port-au-Prince') ?>">
+            <p class="field__hint">
+                Une adresse complète, le nom du lieu tel qu'il apparaît sur Google Maps, ou des coordonnées
+                (ex. <code>18.5392, -72.3364</code>). Vide : l'adresse de contact est utilisée.
+            </p>
+            <?php if ($message = error_for('map_query')): ?>
+                <p class="field__error"><?= e($message) ?></p>
+            <?php endif; ?>
+        </div>
+
+        <div class="field">
+            <label for="map_embed_code">Épingle exacte (facultatif)</label>
+            <textarea id="map_embed_code" name="map_embed_code" rows="3" maxlength="5000"
+                      placeholder="&lt;iframe src=&quot;https://www.google.com/maps/embed?pb=…&quot;&gt;&lt;/iframe&gt;"><?= e((string) old('map_embed_code', $values['map_embed_url'] ?? '')) ?></textarea>
+            <p class="field__hint">
+                Pour placer l'épingle au mètre près : sur Google Maps, cherchez votre studio,
+                puis <strong>Partager → Intégrer une carte → Copier le code HTML</strong> et collez-le ici.
+            </p>
+            <?php if ($message = error_for('map_embed_code')): ?>
+                <p class="field__error"><?= e($message) ?></p>
+            <?php endif; ?>
+        </div>
+
+        <div class="switch-list">
+            <label class="switch">
+                <input type="checkbox" name="map_show_home" value="1"
+                    <?= (bool) old('map_show_home', $values['map_show_home'] ?? true) ? 'checked' : '' ?>>
+                <span class="switch__label">
+                    Afficher la carte sur la page d'accueil
+                    <span class="switch__hint">Elle apparaît toujours sur la page Contact.</span>
+                </span>
+            </label>
+
+            <label class="switch">
+                <input type="checkbox" name="map_click_to_load" value="1"
+                    <?= (bool) old('map_click_to_load', $values['map_click_to_load'] ?? false) ? 'checked' : '' ?>>
+                <span class="switch__label">
+                    Charger la carte seulement après un clic du visiteur
+                    <span class="switch__hint">
+                        Google dépose des cookies dès l'affichage de la carte. Recommandé si vous avez
+                        des visiteurs en Europe (RGPD) ; la page s'affiche aussi plus vite.
+                    </span>
+                </span>
+            </label>
+        </div>
+
+        <?php if ($map->isAvailable()): ?>
+            <div class="map-preview">
+                <p class="field__hint">Aperçu de la carte affichée sur le site :</p>
+                <iframe class="map-preview__frame" src="<?= e((string) $map->embedUrl()) ?>"
+                        title="Aperçu de la carte" loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+        <?php else: ?>
+            <p class="field__hint">Renseignez une adresse ou une localisation pour afficher la carte sur le site.</p>
+        <?php endif; ?>
+    </fieldset>
+
     <fieldset class="fieldset">
         <legend class="fieldset__legend">Réseaux sociaux</legend>
 

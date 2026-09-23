@@ -87,6 +87,13 @@ page vient de l'hébergeur, pas du site.
 Remplacez les informations d'exemple : nom du photographe, e-mail, téléphone,
 adresse, textes, logo et image d'accueil.
 
+Section **Localisation (Google Maps)** : saisissez l'adresse de votre studio
+(ou son nom sur Google Maps, ou ses coordonnées GPS). La carte apparaît sur la
+page Contact et sur l'accueil, avec les boutons « Itinéraire » et « Ouvrir
+dans Google Maps ». Pour placer l'épingle exactement, collez le code de
+Google Maps : **Partager → Intégrer une carte → Copier le code HTML**.
+Aucune clé d'API Google n'est nécessaire.
+
 ### Dans le fichier `.env` (à modifier avec FileZilla)
 
 Une fois `https://` fonctionnel sur votre domaine :
