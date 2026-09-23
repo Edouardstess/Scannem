@@ -17,6 +17,7 @@ use App\Repositories\UserRepository;
 use App\Services\GalleryService;
 use App\Services\PhotoUploadService;
 use App\Services\PublicImageService;
+use App\Services\SettingsService;
 use App\Services\StorageService;
 use App\Services\TokenService;
 
@@ -53,6 +54,7 @@ final class DemoSeeder
         (new StorageService())->ensureReady();
 
         $summary[] = $this->seedUser();
+        $summary[] = $this->seedBranding($images);
         $summary = array_merge($summary, $this->seedServices());
         $summary = array_merge($summary, $this->seedPortfolio($images));
         $summary = array_merge($summary, $this->seedGallery($images));
@@ -72,6 +74,34 @@ final class DemoSeeder
         $users->create('Camille Rivière', $email, self::DEMO_PASSWORD, Role::SUPER_ADMIN);
 
         return sprintf('Compte photographe : %s / %s', $email, self::DEMO_PASSWORD);
+    }
+
+    /**
+     * The hero and the portrait.
+     *
+     * A photographer's homepage is judged on its first image. Shipping the
+     * demo without one leaves a wall of white above the fold, which reads as
+     * a broken site rather than an empty one.
+     */
+    private function seedBranding(ImageFactory $images): string
+    {
+        $settings = new SettingsService();
+        $publicImages = new PublicImageService();
+        $root = $publicImages->publicRoot() . '/site';
+
+        if (trim((string) $settings->get('hero_image', '')) !== '') {
+            return 'Images de marque déjà présentes.';
+        }
+
+        // Wide and dark: the hero carries white text over it.
+        $images->create($root . '/demo-hero.jpg', 2400, 1350, 1);
+        $settings->set('hero_image', 'assets/uploads/site/demo-hero.jpg', 'site');
+
+        // Portrait orientation for the about page.
+        $images->create($root . '/demo-portrait.jpg', 1200, 1600, 6);
+        $settings->set('about_image', 'assets/uploads/site/demo-portrait.jpg', 'site');
+
+        return 'Image d\'accueil et portrait générés.';
     }
 
     /** @return array<int, string> */
@@ -146,18 +176,21 @@ final class DemoSeeder
         $publicImages = new PublicImageService();
         $root = $publicImages->publicRoot() . '/portfolio';
 
+        // Real-sounding titles, not "Image 1". A demo whose captions read
+        // like placeholders is a demo the photographer cannot show anyone,
+        // and the category is already displayed beside the title.
         $categories = [
-            'Mariage'   => 4,
-            'Portrait'  => 3,
-            'Événement' => 2,
-            'Corporate' => 2,
+            'Mariage'   => ['Premiers regards', 'La cérémonie', 'Sortie des invités', 'Dernière danse'],
+            'Portrait'  => ['Lumière de fenêtre', 'En extérieur', 'Atelier'],
+            'Événement' => ['Discours d\'ouverture', 'Dans la salle'],
+            'Corporate' => ['Portrait d\'équipe', 'Lancement de produit'],
         ];
 
         $seed = 1;
         $total = 0;
         $order = 1;
 
-        foreach ($categories as $name => $count) {
+        foreach ($categories as $name => $titles) {
             $categoryId = $portfolio->createCategory([
                 'name'       => $name,
                 'slug'       => str_slug($name),
@@ -166,26 +199,26 @@ final class DemoSeeder
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
-            for ($index = 1; $index <= $count; $index++) {
+            foreach ($titles as $position => $title) {
+                $index = $position + 1;
                 $portrait = $seed % 3 === 0;
                 $width = $portrait ? 1200 : 1600;
                 $height = $portrait ? 1600 : 1067;
 
                 $basename = 'demo-' . str_slug($name) . '-' . $index;
 
-                $images->create($root . '/' . $basename . '.jpg', $width, $height, $seed, $name . ' ' . $index);
+                $images->create($root . '/' . $basename . '.jpg', $width, $height, $seed);
                 $images->create(
                     $root . '/' . $basename . '-thumb.jpg',
                     (int) round($width / 2),
                     (int) round($height / 2),
-                    $seed,
-                    $name . ' ' . $index
+                    $seed
                 );
 
                 $portfolio->insert([
                     'category_id'    => $categoryId,
-                    'title'          => $name . ' — image ' . $index,
-                    'description'    => 'Image de démonstration générée automatiquement.',
+                    'title'          => $title,
+                    'description'    => null,
                     'image_path'     => 'assets/uploads/portfolio/' . $basename . '.jpg',
                     'thumbnail_path' => 'assets/uploads/portfolio/' . $basename . '-thumb.jpg',
                     'width'          => $width,
@@ -300,8 +333,7 @@ final class DemoSeeder
             $temporary = $images->createTemporary(
                 $portrait ? 1400 : 2000,
                 $portrait ? 2000 : 1333,
-                100 + $index,
-                'DEMO ' . $index
+                100 + $index
             );
 
             // Fed through the real upload pipeline so the demo exercises

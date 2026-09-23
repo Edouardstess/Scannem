@@ -1,26 +1,27 @@
 # Root .htaccess.
 #
-# Two jobs:
-#   1. Refuse direct access to everything that is not public/.
-#   2. Forward requests into public/ for hosts where the document root cannot
-#      be pointed at public/ — which is most cheap shared hosting.
+# Only needed when the web server's document root cannot be pointed at
+# public/ — which is the case on most shared hosting. Pointing the document
+# root at public/ remains the correct setup; this file is the fallback.
 #
-# Pointing the document root at public/ remains the correct setup. This file
-# is the fallback, not a replacement for it.
+# It does two things:
+#   1. Refuses direct access to everything that is not public/.
+#   2. Forwards every other request into public/.
 
 Options -Indexes
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block the application's internals outright, whatever the rewrite below
-    # would otherwise do with them.
+    # Block the application's internals outright, before any other rule.
     RewriteRule ^(app|config|database|routes|storage|tests|vendor|docs|bin)(/|$) - [F,L]
     RewriteRule ^(\.env|\.env\..*|composer\.(json|lock)|phpunit\.xml|README\.md)$ - [F,L]
 
-    # Serve everything through public/.
-    RewriteCond %{REQUEST_URI} !^/public/
-    RewriteRule ^(.*)$ public/$1 [L]
+    # Forward into public/. The negative lookahead is what stops the rewrite
+    # re-entering itself: without it, public/index.php is rewritten to
+    # public/public/index.php on the next pass and Apache loops until it
+    # gives up with a 500.
+    RewriteRule ^(?!public/)(.*)$ public/$1 [L]
 </IfModule>
 
 # Belt and braces for hosts without mod_rewrite.

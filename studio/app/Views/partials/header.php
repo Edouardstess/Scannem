@@ -39,7 +39,7 @@ $isActive = static function (string $path) use ($currentPath): bool {
 
         <button class="site-header__toggle" type="button"
                 aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
-            <span class="sr-only">Ouvrir le menu</span>
+            <span class="sr-only" data-nav-label>Ouvrir le menu</span>
             <span class="site-header__bars" aria-hidden="true"><span></span><span></span></span>
         </button>
 

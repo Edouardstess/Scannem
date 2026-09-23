@@ -3,9 +3,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Works when the application is installed in a subdirectory as well as at
-    # the document root.
-    RewriteBase /
+    # No RewriteBase on purpose. Hard-coding "/" breaks every installation
+    # that does not sit at the document root; leaving it out lets Apache work
+    # the prefix out from the directory this file is in, which is right in
+    # both cases.
 
     # Never rewrite a request that already points at a real file (assets) or
     # directory; everything else becomes a route.
@@ -18,11 +19,11 @@
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    # PHP sends the rest of the security headers per response; these two are
+    # PHP sends the rest of the security headers per response; these three are
     # here so that static files carry them too.
 </IfModule>
 
-# Long-lived caching for fingerprint-free static assets, revalidated by ETag.
+# Long-lived caching for static assets, revalidated by ETag.
 <IfModule mod_expires.c>
     ExpiresActive On
     ExpiresByType text/css "access plus 7 days"

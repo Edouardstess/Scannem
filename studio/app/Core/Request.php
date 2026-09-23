@@ -12,6 +12,10 @@ namespace App\Core;
  */
 final class Request
 {
+    private static ?self $current = null;
+
+    private string $basePath = '';
+
     /** @param array<string, mixed> $query
      *  @param array<string, mixed> $body
      *  @param array<string, mixed> $server
@@ -36,12 +40,10 @@ final class Request
         $path = parse_url($uri, PHP_URL_PATH);
         $path = is_string($path) ? $path : '/';
 
-        // The application is designed to live at the document root, but it also
-        // works inside a subdirectory on shared hosting.
-        $scriptDir = str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php')));
+        $basePath = self::detectBasePath($path, (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
 
-        if ($scriptDir !== '/' && $scriptDir !== '' && $scriptDir !== '.' && str_starts_with($path, $scriptDir)) {
-            $path = substr($path, strlen($scriptDir));
+        if ($basePath !== '') {
+            $path = substr($path, strlen($basePath));
         }
 
         $path = '/' . trim((string) $path, '/');
@@ -62,7 +64,97 @@ final class Request
             }
         }
 
-        return new self($method, $path, $_GET, $body, $_SERVER, $_FILES, $_COOKIE, $raw);
+        $request = new self($method, $path, $_GET, $body, $_SERVER, $_FILES, $_COOKIE, $raw);
+        $request->basePath = $basePath;
+        self::$current = $request;
+
+        return $request;
+    }
+
+    /**
+     * The prefix the application is mounted under, '' at the document root.
+     *
+     * Three layouts have to work:
+     *
+     *   1. Document root points at public/ — SCRIPT_NAME is /index.php and
+     *      there is no prefix. This is the correct production setup.
+     *   2. Document root points at the project, and the root .htaccess
+     *      rewrites into public/ — SCRIPT_NAME is /studio/public/index.php
+     *      while the browser asked for /studio/. The prefix is /studio.
+     *   3. The visitor reaches public/ directly — SCRIPT_NAME is
+     *      /studio/public/index.php and so is the URL. The prefix is
+     *      /studio/public.
+     *
+     * Candidates are tried longest first, because /studio/public is a valid
+     * prefix only when the URL really contains it.
+     */
+    public static function detectBasePath(string $path, string $scriptName): string
+    {
+        $directory = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+
+        if ($directory === '' || $directory === '.') {
+            return '';
+        }
+
+        $candidates = [$directory];
+
+        // Case 2: the rewrite added /public that the browser never sent.
+        if (basename($directory) === 'public') {
+            $parent = rtrim(dirname($directory), '/');
+            $candidates[] = $parent === '.' ? '' : $parent;
+        }
+
+        foreach ($candidates as $candidate) {
+            if ($candidate === '') {
+                return '';
+            }
+
+            if ($path === $candidate || str_starts_with($path, $candidate . '/')) {
+                return $candidate;
+            }
+        }
+
+        return '';
+    }
+
+    /** The most recently captured request, for URL generation in templates. */
+    public static function current(): ?self
+    {
+        return self::$current;
+    }
+
+    /** Only the test suite needs to clear this. */
+    public static function forgetCurrent(): void
+    {
+        self::$current = null;
+    }
+
+    public function basePath(): string
+    {
+        return $this->basePath;
+    }
+
+    public function host(): string
+    {
+        $host = (string) ($this->server['HTTP_HOST'] ?? $this->server['SERVER_NAME'] ?? '');
+
+        // Host headers are attacker-controlled; strip anything that is not a
+        // hostname or port before it can end up inside a generated URL.
+        $host = strtolower(trim($host));
+
+        return preg_match('/^[a-z0-9._-]+(:\d+)?$/', $host) === 1 ? $host : 'localhost';
+    }
+
+    /**
+     * Where this installation actually lives, as seen by the browser.
+     *
+     * Used to build links and asset URLs, so the site works wherever it is
+     * dropped — including a subdirectory — before anyone has configured
+     * APP_URL.
+     */
+    public function baseUrl(): string
+    {
+        return ($this->isSecure() ? 'https://' : 'http://') . $this->host() . $this->basePath;
     }
 
     /**

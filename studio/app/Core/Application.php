@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Exceptions\DatabaseUnavailableException;
 use App\Exceptions\HttpException;
 use App\Services\SettingsService;
 use Throwable;
@@ -104,15 +105,77 @@ final class Application
     /** Run the request through the router and return the response. */
     public function handle(Request $request): Response
     {
+        // A copy that has been unzipped but not installed has no .env, so
+        // every page would fail on the first query. Sending the visitor to
+        // the installer is the only useful answer; a 500 is not.
+        if ($this->needsInstallation()) {
+            return $this->renderInstallationRequired($request);
+        }
+
         try {
             $this->shareViewData($request);
 
             return $this->router->dispatch($request);
         } catch (HttpException $e) {
             return $this->renderHttpException($e, $request);
+        } catch (DatabaseUnavailableException $e) {
+            // The configuration exists but the database does not answer: a
+            // wrong password, a server that is down, or a half-finished
+            // install. Say which, rather than showing a blank 500.
+            return $this->renderDatabaseUnavailable($request);
         } catch (Throwable $e) {
             return $this->renderThrowable($e, $request);
         }
+    }
+
+    /**
+     * Has this copy been configured at all?
+     *
+     * Deliberately one filesystem check and no query: in normal operation
+     * this runs on every request and must cost nothing.
+     */
+    public function needsInstallation(): bool
+    {
+        return !is_file($this->basePath . '/.env');
+    }
+
+    public function installerPath(): ?string
+    {
+        return is_file($this->basePath . '/public/install.php') ? 'install.php' : null;
+    }
+
+    private function renderInstallationRequired(Request $request): Response
+    {
+        $installer = $this->installerPath();
+
+        if ($installer !== null) {
+            // Relative, because APP_URL does not exist yet and the site may
+            // well be sitting in a subdirectory.
+            return Response::redirect(rtrim($request->basePath(), '/') . '/' . $installer, 302);
+        }
+
+        return Response::html(
+            View::render('errors.install', [
+                'reason'    => 'missing_env',
+                'installer' => null,
+            ]),
+            503
+        )->header('Retry-After', '3600');
+    }
+
+    private function renderDatabaseUnavailable(Request $request): Response
+    {
+        if ($request->isAjax()) {
+            return Response::json(['error' => 'Base de données indisponible.'], 503);
+        }
+
+        return Response::html(
+            View::render('errors.install', [
+                'reason'    => 'database',
+                'installer' => $this->installerPath(),
+            ]),
+            503
+        )->header('Retry-After', '120');
     }
 
     /**

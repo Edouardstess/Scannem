@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Core;
 
 use PDO;
+use App\Exceptions\DatabaseUnavailableException;
 use PDOException;
-use RuntimeException;
 
 /**
  * Single PDO connection, lazily opened.
@@ -38,7 +38,7 @@ final class Database
             // The message can carry credentials; never surface it to the browser.
             Logger::error('Database connection failed', ['driver' => $driver, 'code' => $e->getCode()]);
 
-            throw new RuntimeException('Database connection failed.', 0, $e);
+            throw new DatabaseUnavailableException('Database connection failed.', 0, $e);
         }
 
         return self::$connection;

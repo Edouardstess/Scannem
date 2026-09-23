@@ -14,17 +14,34 @@
     var nav = document.querySelector('[data-nav]');
 
     if (navToggle && nav) {
-        navToggle.addEventListener('click', function () {
-            var open = nav.classList.toggle('is-open');
+        var navLabel = navToggle.querySelector('[data-nav-label]');
+
+        var setNavState = function (open) {
+            nav.classList.toggle('is-open', open);
             navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+            if (navLabel) {
+                navLabel.textContent = open ? 'Fermer le menu' : 'Ouvrir le menu';
+            }
+        };
+
+        navToggle.addEventListener('click', function () {
+            setNavState(!nav.classList.contains('is-open'));
+        });
+
+        // Tapping a link closes the panel; leaving it open over the next page
+        // would hide the content the visitor just asked for.
+        nav.addEventListener('click', function (event) {
+            if (event.target.closest('a')) {
+                setNavState(false);
+            }
         });
 
         // Escape closes the menu and returns focus to the control that opened
         // it, which is what a keyboard user expects.
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape' && nav.classList.contains('is-open')) {
-                nav.classList.remove('is-open');
-                navToggle.setAttribute('aria-expanded', 'false');
+                setNavState(false);
                 navToggle.focus();
             }
         });

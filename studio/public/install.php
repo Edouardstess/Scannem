@@ -40,6 +40,9 @@ require_once $basePath . '/app/Helpers/helpers.php';
 Config::loadEnv($basePath . '/.env');
 Config::load($basePath . '/config');
 
+// This script is reached directly, never through the front controller, so it
+// is unaffected by the installation-required redirect in Application.
+
 date_default_timezone_set((string) Config::get('app.timezone', 'UTC'));
 Session::start();
 

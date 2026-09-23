@@ -5,22 +5,28 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 /**
- * Generates placeholder photographs for the demonstration data.
+ * Placeholder photographs for the demonstration data.
  *
- * No stock photo is bundled and no real person appears anywhere: the demo
- * images are gradients drawn with GD, which keeps the repository small and
- * avoids shipping anyone's likeness or a licence obligation.
+ * No stock photo is bundled and no real person appears: the demo images are
+ * drawn with GD. They imitate out-of-focus light — a deep gradient, soft
+ * overlapping discs, a vignette — because a photographer's site judged on a
+ * flat grey rectangle looks broken, and the demo is the first impression.
+ *
+ * They carry no caption. A visible "Sample 1" is what makes a demo look like
+ * a demo instead of like the product.
  */
 final class ImageFactory
 {
-    /** Muted, photographic palettes rather than saturated test colours. */
+    /** Deep, photographic pairs: shadow first, highlight second. */
     private const PALETTES = [
-        [[38, 44, 56], [120, 134, 150]],
-        [[62, 48, 44], [188, 150, 116]],
-        [[34, 52, 48], [140, 168, 150]],
-        [[58, 44, 62], [172, 140, 176]],
-        [[70, 58, 40], [206, 178, 126]],
-        [[40, 40, 40], [150, 150, 150]],
+        [[18, 22, 30], [148, 166, 188]],   // dusk blue
+        [[34, 22, 18], [214, 166, 116]],   // warm amber
+        [[16, 30, 26], [140, 184, 158]],   // forest
+        [[30, 20, 34], [196, 154, 196]],   // plum
+        [[38, 28, 16], [228, 194, 132]],   // golden hour
+        [[20, 20, 22], [176, 176, 180]],   // monochrome
+        [[26, 16, 20], [206, 140, 136]],   // rose
+        [[14, 26, 34], [132, 176, 200]],   // steel
     ];
 
     public function isAvailable(): bool
@@ -28,12 +34,7 @@ final class ImageFactory
         return function_exists('imagecreatetruecolor') && function_exists('imagejpeg');
     }
 
-    /**
-     * Write a JPEG placeholder and return its path.
-     *
-     * @param string $label Drawn onto the image so demo photos are telling apart.
-     */
-    public function create(string $path, int $width, int $height, int $seed, string $label = ''): string
+    public function create(string $path, int $width, int $height, int $seed): string
     {
         if (!$this->isAvailable()) {
             throw new \RuntimeException('GD is required to generate the demonstration images.');
@@ -46,72 +47,127 @@ final class ImageFactory
         }
 
         $image = imagecreatetruecolor($width, $height);
-        [$from, $to] = self::PALETTES[$seed % count(self::PALETTES)];
+        [$shadow, $highlight] = self::PALETTES[$seed % count(self::PALETTES)];
 
-        // A diagonal gradient reads as a photograph at thumbnail size far
-        // better than a flat fill does.
-        for ($y = 0; $y < $height; $y++) {
-            $ratio = $y / max(1, $height - 1);
-            $colour = imagecolorallocate(
-                $image,
-                (int) round($from[0] + ($to[0] - $from[0]) * $ratio),
-                (int) round($from[1] + ($to[1] - $from[1]) * $ratio),
-                (int) round($from[2] + ($to[2] - $from[2]) * $ratio)
-            );
+        $this->drawGradient($image, $width, $height, $shadow, $highlight);
+        $this->drawBokeh($image, $width, $height, $seed, $highlight);
+        $this->drawVignette($image, $width, $height);
 
-            imagefilledrectangle($image, 0, $y, $width, $y, $colour);
-        }
-
-        $this->drawGrain($image, $width, $height, $seed);
-
-        if ($label !== '') {
-            $this->drawLabel($image, $width, $height, $label);
-        }
-
-        imagejpeg($image, $path, 86);
+        imagejpeg($image, $path, 88);
         imagedestroy($image);
 
         return $path;
     }
 
-    private function drawGrain(\GdImage $image, int $width, int $height, int $seed): void
+    /**
+     * A diagonal gradient, light falling from one corner.
+     *
+     * Drawn per pixel-row on a diagonal axis rather than straight down: a
+     * purely vertical gradient reads as a UI background, a diagonal one reads
+     * as light.
+     */
+    private function drawGradient(\GdImage $image, int $width, int $height, array $shadow, array $highlight): void
     {
-        mt_srand($seed);
+        $span = $width + $height;
 
-        $light = imagecolorallocatealpha($image, 255, 255, 255, 105);
-        $dark = imagecolorallocatealpha($image, 0, 0, 0, 105);
+        for ($y = 0; $y < $height; $y++) {
+            for ($x = 0; $x < $width; $x += 8) {
+                // Eased just enough that the highlight stays in a corner
+                // rather than washing evenly across the frame.
+                $ratio = (($x + $y) / max(1, $span)) ** 1.15;
 
-        for ($i = 0; $i < 90; $i++) {
-            $x = mt_rand(0, $width);
-            $y = mt_rand(0, $height);
-            $radius = mt_rand((int) ($width / 14), (int) ($width / 4));
+                $colour = imagecolorallocate(
+                    $image,
+                    (int) round($shadow[0] + ($highlight[0] - $shadow[0]) * $ratio),
+                    (int) round($shadow[1] + ($highlight[1] - $shadow[1]) * $ratio),
+                    (int) round($shadow[2] + ($highlight[2] - $shadow[2]) * $ratio)
+                );
 
-            imagefilledellipse($image, $x, $y, $radius, $radius, $i % 2 === 0 ? $light : $dark);
+                imagefilledrectangle($image, $x, $y, $x + 8, $y, $colour);
+            }
+        }
+    }
+
+    /** Soft discs of light, as a fast lens renders an out-of-focus background. */
+    private function drawBokeh(\GdImage $image, int $width, int $height, int $seed, array $highlight): void
+    {
+        mt_srand($seed * 7919);
+
+        $count = (int) max(18, round(($width * $height) / 90000));
+
+        for ($i = 0; $i < $count; $i++) {
+            $radius = mt_rand((int) ($width / 16), (int) ($width / 5));
+            $x = mt_rand(-$radius, $width + $radius);
+            $y = mt_rand(-$radius, $height + $radius);
+
+            // Concentric rings fake a soft edge: GD has no blur cheap enough
+            // to run over a whole demo set. Faint on purpose — bokeh is a
+            // suggestion of light, not a pattern of circles.
+            for ($ring = 5; $ring >= 1; $ring--) {
+                $colour = imagecolorallocatealpha(
+                    $image,
+                    min(255, $highlight[0] + 30),
+                    min(255, $highlight[1] + 30),
+                    min(255, $highlight[2] + 30),
+                    122 - $ring
+                );
+
+                if ($colour === false) {
+                    continue;
+                }
+
+                $size = (int) ($radius * ($ring / 5));
+                imagefilledellipse($image, $x, $y, $size, $size, $colour);
+            }
         }
 
         mt_srand();
     }
 
-    private function drawLabel(\GdImage $image, int $width, int $height, string $label): void
+    /**
+     * Darken the four edges.
+     *
+     * Drawn as edge bands rather than concentric ellipses: filled ellipses
+     * centred on the frame stack up in the middle, which darkens the centre —
+     * the opposite of a vignette. Bands are also far cheaper than testing the
+     * distance of every pixel from the centre.
+     */
+    private function drawVignette(\GdImage $image, int $width, int $height): void
     {
-        $ascii = (string) preg_replace('/[^\x20-\x7E]/', '', $label);
-        $font = 5;
-        $textWidth = imagefontwidth($font) * strlen($ascii);
-        $x = max(8, (int) (($width - $textWidth) / 2));
-        $y = (int) (($height - imagefontheight($font)) / 2);
+        $depthX = (int) max(24, $width * 0.34);
+        $depthY = (int) max(24, $height * 0.34);
+        $strongest = 96; // 0 opaque, 127 transparent: a light touch.
 
-        $shadow = imagecolorallocatealpha($image, 0, 0, 0, 60);
-        $white = imagecolorallocatealpha($image, 255, 255, 255, 30);
+        for ($i = 0; $i < $depthX; $i++) {
+            $alpha = (int) round($strongest + (127 - $strongest) * ($i / $depthX));
+            $colour = imagecolorallocatealpha($image, 0, 0, 0, min(127, $alpha));
 
-        imagestring($image, $font, $x + 1, $y + 1, $ascii, $shadow);
-        imagestring($image, $font, $x, $y, $ascii, $white);
+            if ($colour === false) {
+                continue;
+            }
+
+            imagefilledrectangle($image, $i, 0, $i, $height, $colour);
+            imagefilledrectangle($image, $width - 1 - $i, 0, $width - 1 - $i, $height, $colour);
+        }
+
+        for ($i = 0; $i < $depthY; $i++) {
+            $alpha = (int) round($strongest + (127 - $strongest) * ($i / $depthY));
+            $colour = imagecolorallocatealpha($image, 0, 0, 0, min(127, $alpha));
+
+            if ($colour === false) {
+                continue;
+            }
+
+            imagefilledrectangle($image, 0, $i, $width, $i, $colour);
+            imagefilledrectangle($image, 0, $height - 1 - $i, $width, $height - 1 - $i, $colour);
+        }
     }
 
     /** Create the file in a temporary location, as an upload would arrive. */
-    public function createTemporary(int $width, int $height, int $seed, string $label = ''): string
+    public function createTemporary(int $width, int $height, int $seed): string
     {
         $path = sys_get_temp_dir() . '/studio-seed-' . bin2hex(random_bytes(6)) . '.jpg';
 
-        return $this->create($path, $width, $height, $seed, $label);
+        return $this->create($path, $width, $height, $seed);
     }
 }

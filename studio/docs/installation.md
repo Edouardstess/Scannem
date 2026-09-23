@@ -147,6 +147,14 @@ php -r "echo password_hash('votre-mot-de-passe', PASSWORD_DEFAULT), PHP_EOL;"
 
 ## 6. Serveur web
 
+### Installation dans un sous-dossier
+
+`https://exemple.com/studio/` fonctionne sans réglage : l'application déduit
+son préfixe de l'emplacement de `public/index.php` et génère tous ses liens et
+ses feuilles de style à partir de l'adresse réellement demandée par le
+navigateur. `APP_URL` reste utilisé pour les e-mails, la ligne de commande et
+la balise `canonical` — renseignez-le avec l'adresse publique définitive.
+
 ### Racine web sur `public/` (recommandé)
 
 Apache :

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Config;
 use App\Core\Csrf;
+use App\Core\Request;
 use App\Core\View;
 
 if (!function_exists('e')) {
@@ -54,11 +55,62 @@ if (!function_exists('config')) {
     }
 }
 
+if (!function_exists('base_url')) {
+    /**
+     * The root every generated URL hangs off.
+     *
+     * During a web request this is what the browser actually asked for, so
+     * the site works wherever it is installed — a subdirectory included —
+     * before anyone has edited APP_URL. A configured APP_URL is preferred
+     * only when it agrees with the live request, which is how an https or
+     * www preference is honoured without a wrong value breaking the site.
+     *
+     * Outside a request (CLI, cron, queued mail) there is nothing to detect,
+     * so APP_URL is the only answer — which is exactly why it still has to be
+     * set correctly for e-mails and shared gallery links.
+     */
+    function base_url(): string
+    {
+        $configured = rtrim((string) Config::get('app.url', ''), '/');
+        $request = Request::current();
+
+        if ($request === null) {
+            return $configured;
+        }
+
+        $runtime = $request->baseUrl();
+
+        if ($configured === '') {
+            return $runtime;
+        }
+
+        $sameHost = parse_url($configured, PHP_URL_HOST) === explode(':', $request->host())[0];
+        $samePath = rtrim((string) (parse_url($configured, PHP_URL_PATH) ?? ''), '/') === $request->basePath();
+
+        return $sameHost && $samePath ? $configured : $runtime;
+    }
+}
+
 if (!function_exists('url')) {
     /** Absolute URL for an application path. */
     function url(string $path = '/'): string
     {
-        return rtrim((string) Config::get('app.url'), '/') . '/' . ltrim($path, '/');
+        return base_url() . '/' . ltrim($path, '/');
+    }
+}
+
+if (!function_exists('canonical_url')) {
+    /**
+     * The address a search engine should index.
+     *
+     * Always the configured APP_URL when there is one: a site reachable on
+     * several hostnames must still declare a single canonical address.
+     */
+    function canonical_url(string $path = '/'): string
+    {
+        $configured = rtrim((string) Config::get('app.url', ''), '/');
+
+        return ($configured !== '' ? $configured : base_url()) . '/' . ltrim($path, '/');
     }
 }
 

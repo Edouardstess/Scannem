@@ -73,6 +73,17 @@ php bin/console.php install          # migrations + paramètres + compte admin
 php -S localhost:8000 -t public
 ```
 
+### En local avec XAMPP / WAMP / MAMP
+
+Décompressez dans `htdocs/studio/` (ou tout autre nom), démarrez Apache et
+MySQL, créez une base vide dans phpMyAdmin, puis ouvrez
+`http://localhost/studio/`. Le site vous redirige vers l'installateur.
+
+Aucune configuration d'URL n'est nécessaire : l'application détecte le
+sous-dossier où elle est installée et construit ses liens en conséquence.
+Pour les données de démonstration, lancez ensuite `php bin/console.php seed`
+depuis le dossier `studio/`.
+
 ### Sans accès SSH (hébergement mutualisé)
 
 Déposez les fichiers par FTP, créez une base MySQL vide depuis le panneau de

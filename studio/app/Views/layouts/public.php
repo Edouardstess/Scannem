@@ -22,7 +22,7 @@ $description = View::section('meta_description') !== ''
     ? View::section('meta_description')
     : (string) ($settings['meta_description'] ?? $settings['tagline'] ?? '');
 $ogImage = ($settings['hero_image'] ?? '') !== '' ? url((string) $settings['hero_image']) : null;
-$canonical = url(ltrim($currentPath, '/'));
+$canonical = canonical_url(ltrim($currentPath, '/'));
 ?>
 <!doctype html>
 <html lang="fr">

@@ -159,8 +159,26 @@ a:hover { text-decoration-color: currentColor; }
     display: none; width: 44px; height: 44px; padding: 0;
     background: none; border: 0; cursor: pointer;
 }
-.site-header__bars { display: grid; gap: 6px; }
-.site-header__bars span { display: block; height: 1px; background: var(--color-text); }
+
+/*
+ * The two bars need an explicit width. Without one they inherit the width of
+ * a shrink-to-fit grid container whose only children are these bars — which
+ * is zero, so the button stays clickable but draws nothing.
+ */
+.site-header__bars { display: grid; gap: 6px; width: 24px; }
+.site-header__bars span {
+    display: block; width: 100%; height: 1.5px;
+    background: var(--color-text);
+    transition: transform var(--transition), opacity var(--transition);
+}
+
+/* Open: the bars cross, so the control reads as "close". */
+.site-header__toggle[aria-expanded="true"] .site-header__bars span:first-child {
+    transform: translateY(4px) rotate(45deg);
+}
+.site-header__toggle[aria-expanded="true"] .site-header__bars span:last-child {
+    transform: translateY(-3.5px) rotate(-45deg);
+}
 
 .site-nav__list {
     display: flex; align-items: center; gap: var(--space-3);
@@ -176,9 +194,11 @@ a:hover { text-decoration-color: currentColor; }
     .site-header__toggle { display: grid; place-items: center; }
 
     .site-nav {
-        position: fixed; inset: var(--header-height) 0 auto 0;
+        position: fixed; inset: var(--header-height) 0 auto 0; z-index: 95;
         background: var(--color-background); border-bottom: 1px solid var(--color-border);
         display: none; padding: var(--space-3);
+        max-height: calc(100dvh - var(--header-height)); overflow-y: auto;
+        box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.45);
     }
     .site-nav.is-open { display: block; }
     .site-nav__list { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
@@ -193,7 +213,24 @@ a:hover { text-decoration-color: currentColor; }
     display: grid; align-items: end;
     margin-bottom: var(--space-5);
 }
-.hero--plain { min-height: auto; padding: var(--space-6) 0 var(--space-5); align-items: center; }
+
+/*
+ * No hero image configured yet.
+ *
+ * Bounded height and a soft tonal wash, so a fresh install reads as a
+ * deliberate editorial cover rather than as a page that failed to load. The
+ * photographer replaces it from the admin the moment they upload one.
+ */
+.hero--plain {
+    min-height: min(62vh, 620px);
+    align-items: center;
+    padding: var(--space-5) 0;
+    background:
+        radial-gradient(900px 420px at 78% 18%, color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 70%),
+        radial-gradient(700px 380px at 12% 88%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 72%),
+        var(--color-surface-alt);
+    border-bottom: 1px solid var(--color-border);
+}
 
 .hero__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
@@ -208,6 +245,9 @@ a:hover { text-decoration-color: currentColor; }
     position: relative; width: 100%; max-width: var(--wrap);
     margin: 0 auto; padding: var(--space-5) var(--space-3);
 }
+
+/* Over a photograph the text sits low; on the plain variant it is centred. */
+.hero--plain .hero__content { padding-block: 0; }
 .hero:not(.hero--plain) .hero__content { color: #fff; }
 
 .hero__eyebrow {
@@ -222,7 +262,20 @@ a:hover { text-decoration-color: currentColor; }
 .hero__subtitle { max-width: 48ch; font-size: var(--step-1); margin: 0 0 var(--space-3); opacity: 0.92; }
 .hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
-.hero:not(.hero--plain) .button--ghost { color: #fff; border-color: rgba(255, 255, 255, 0.7); }
+/*
+ * Over a photograph the buttons invert: a near-black primary button on a dark
+ * hero is close to invisible, which is exactly where the main call to action
+ * must not be.
+ */
+.hero:not(.hero--plain) .button {
+    background: #fff; color: var(--color-primary); border-color: #fff;
+}
+.hero:not(.hero--plain) .button:hover {
+    background: var(--color-accent); border-color: var(--color-accent); color: #fff;
+}
+.hero:not(.hero--plain) .button--ghost {
+    background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.75);
+}
 .hero:not(.hero--plain) .button--ghost:hover { background: #fff; color: var(--color-primary); }
 
 /* --- Sections ----------------------------------------------------------- */
@@ -267,6 +320,35 @@ a:hover { text-decoration-color: currentColor; }
 
 @media (max-width: 640px) { .masonry { columns: 1; } }
 
+/* --- Homepage selection -------------------------------------------------- */
+
+.selection {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+}
+.selection__item { margin: 0; }
+.selection__link {
+    position: relative; display: block; overflow: hidden;
+    background: var(--color-surface-alt);
+}
+.selection__link img {
+    width: 100%; aspect-ratio: 4 / 5; object-fit: cover;
+    transition: transform 620ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.selection__link:hover img { transform: scale(1.04); }
+
+.selection__tag {
+    position: absolute; left: 0; bottom: 0;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #fff; background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
+    width: 100%;
+}
+
+@media (max-width: 900px) { .selection { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .selection { grid-template-columns: 1fr; } }
+
 .feature-image { max-height: 60vh; overflow: hidden; }
 .feature-image img { width: 100%; height: 100%; max-height: 60vh; object-fit: cover; }
 
@@ -291,10 +373,16 @@ a:hover { text-decoration-color: currentColor; }
 .pill:hover { border-color: var(--color-accent); }
 .pill__count { color: var(--color-muted); font-size: 0.75rem; }
 
+/*
+ * Four steps across on a wide screen, two on a narrow one. auto-fit would put
+ * three across at some widths and leave the fourth alone on its own row.
+ */
 .steps {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--space-3); list-style: none; margin: 0; padding: 0; counter-reset: step;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3); list-style: none; margin: 0; padding: 0;
 }
+@media (max-width: 1000px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
 .steps__number {
     display: block; font-family: var(--font-serif); font-size: var(--step-2);
     color: var(--color-accent); margin-bottom: var(--space-1);

@@ -69,25 +69,25 @@ $process = is_array($settings['process_steps'] ?? null) ? $settings['process_ste
                 <h2 class="section__title">Travaux récents</h2>
             </header>
 
-            <div class="masonry" data-lightbox-group="home">
+            <?php /* A uniform grid, not masonry: the homepage selection is a
+                     composed block, and a ragged last row reads as broken. The
+                     full portfolio page keeps masonry, where variety helps. */ ?>
+            <div class="selection" data-lightbox-group="home">
                 <?php foreach ($featured as $index => $item): ?>
-                    <?php
-                    $thumb = (string) ($item['thumbnail_path'] ?? $item['image_path']);
-                    $full = (string) $item['image_path'];
-                    $ratio = ((int) ($item['width'] ?? 0) > 0 && (int) ($item['height'] ?? 0) > 0)
-                        ? (int) $item['width'] . ' / ' . (int) $item['height']
-                        : '4 / 5';
-                    ?>
-                    <figure class="masonry__item" style="--ratio: <?= e($ratio) ?>">
-                        <a href="<?= e(url($full)) ?>"
+                    <?php $thumb = (string) ($item['thumbnail_path'] ?? $item['image_path']); ?>
+                    <figure class="selection__item">
+                        <a class="selection__link"
+                           href="<?= e(url((string) $item['image_path'])) ?>"
                            data-lightbox
                            data-caption="<?= e((string) $item['title']) ?>">
                             <img src="<?= e(url($thumb)) ?>"
                                  alt="<?= e((string) $item['title']) ?>"
                                  loading="<?= $index < 3 ? 'eager' : 'lazy' ?>"
                                  decoding="async">
+                            <?php if (($item['category_name'] ?? '') !== ''): ?>
+                                <span class="selection__tag"><?= e((string) $item['category_name']) ?></span>
+                            <?php endif; ?>
                         </a>
-                        <figcaption class="masonry__caption"><?= e((string) $item['title']) ?></figcaption>
                     </figure>
                 <?php endforeach; ?>
             </div>
