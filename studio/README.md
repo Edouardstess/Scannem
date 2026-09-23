@@ -63,6 +63,8 @@ présentes, toutes à activer selon le contexte.
 
 ## Démarrage rapide
 
+### Avec un accès SSH
+
 ```bash
 cp .env.example .env
 php bin/console.php key:generate     # copiez la ligne APP_KEY dans .env
@@ -70,6 +72,16 @@ php bin/console.php key:generate     # copiez la ligne APP_KEY dans .env
 php bin/console.php install          # migrations + paramètres + compte admin
 php -S localhost:8000 -t public
 ```
+
+### Sans accès SSH (hébergement mutualisé)
+
+Déposez les fichiers par FTP, créez une base MySQL vide depuis le panneau de
+votre hébergeur, puis ouvrez `https://votre-domaine/install.php`. L'installateur
+vérifie le serveur, teste la connexion, écrit le `.env` et crée votre compte.
+
+**Supprimez ensuite `public/install.php`.** Il refuse de s'exécuter une fois un
+compte créé, mais le laisser en place reste une mauvaise idée — l'application
+vous le rappellera dans ses paramètres tant qu'il est présent.
 
 Pour découvrir l'application avec des données factices :
 
@@ -93,8 +105,9 @@ Documentation complète : [`docs/installation.md`](docs/installation.md).
 2. Crée un client, puis un événement, puis une galerie.
 3. Dépose ses photographies (glisser-déposer, une requête par fichier,
    progression et reprise par fichier).
-4. Le système génère miniature (400 px) et aperçu (1600 px) pour chacune ;
-   l'original n'est jamais modifié.
+4. Le système génère miniature (400 px) et aperçu (1600 px) pour chacune, plus
+   leur équivalent WebP quand le serveur sait le produire ; l'original n'est
+   jamais modifié.
 5. Récupère les deux liens sur l'écran de partage, copie celui de consultation
    et l'envoie au client.
 6. Plus tard, active le téléchargement : le lien déjà transmis devient actif.
@@ -103,7 +116,8 @@ Documentation complète : [`docs/installation.md`](docs/installation.md).
 
 1. Ouvre le lien reçu, saisit le mot de passe si la galerie en a un.
 2. Parcourt les photographies : grille, lightbox, zoom, plein écran,
-   navigation au clavier et au doigt.
+   navigation au clavier et au doigt. Son navigateur reçoit du WebP s'il
+   l'accepte — environ deux tiers de poids en moins — et du JPEG sinon.
 3. Marque ses préférées si la sélection est activée.
 4. Avec le lien de téléchargement : récupère une photo, une sélection, ou toute
    la galerie en archive ZIP.
@@ -123,7 +137,8 @@ Monolithe modulaire. MVC, couche de services, dépôts (repositories).
 app/
   Core/          Router, Request, Response, Database, Session, Auth, View,
                  Validator, Csrf, Config, Logger, FileStorage, Encrypter, Migrator
-  Controllers/   HTTP uniquement : valider, déléguer, répondre
+  Controllers/   HTTP uniquement : déléguer et répondre
+  Validators/    Règles de validation, une classe par formulaire
   Services/      Toute la logique métier
   Repositories/  Accès aux données, PDO, requêtes préparées
   Middleware/    Sécurité transverse (auth, CSRF, permissions, en-têtes)
@@ -151,7 +166,7 @@ php tests/run.php              # tout
 php tests/run.php TokenTest    # une classe
 ```
 
-131 tests, 335 assertions, aucune dépendance externe. Les tests critiques
+169 tests, 439 assertions, aucune dépendance externe. Les tests critiques
 vérifient notamment :
 
 | Ce qui est vérifié | Où |
@@ -167,6 +182,9 @@ vérifient notamment :
 | Les requêtes passent par des requêtes préparées | `SqlSafetyTest` |
 | Les formulaires POST sont protégés contre le CSRF | `CsrfTest` |
 | Toute sortie de template passe par un échappeur | `EscapingTest` |
+| L'installateur refuse de s'exécuter deux fois | `InstallerTest` |
+| Un formulaire ne livre que les champs qu'il déclare | `FormRequestTest` |
+| Régénérer un lien tue immédiatement le précédent | `ShareTest` |
 
 ---
 

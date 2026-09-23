@@ -12,6 +12,7 @@
 /storage/private/*.sqlite
 /storage/private/*.sqlite-*
 /storage/logs/*
+/storage/private/.installed
 
 # Uploaded public images (portfolio, services, branding).
 /public/assets/uploads/*

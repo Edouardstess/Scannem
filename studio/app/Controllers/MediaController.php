@@ -111,7 +111,7 @@ final class MediaController extends Controller
             ? VariantType::THUMBNAIL
             : VariantType::PREVIEW;
 
-        $variant = $this->photos->variant((int) $photo['id'], $variantType);
+        $variant = $this->photos->bestVariant((int) $photo['id'], $variantType, self::acceptsWebp($request));
 
         if ($variant === null) {
             // No fallback to the original. A missing derivative is a
@@ -119,14 +119,31 @@ final class MediaController extends Controller
             $this->abort(404, 'Aperçu indisponible pour cette photo.');
         }
 
+        $extension = str_contains((string) $variant['mime_type'], 'webp') ? 'webp' : 'jpg';
+
         return $this->downloads->serve(
             (string) $variant['storage_path'],
             (string) $variant['mime_type'],
-            $this->displayName($photo, 'jpg'),
+            $this->displayName($photo, $extension),
             'inline',
             true,
             $request
-        );
+        )
+            // The same URL can answer with WebP or JPEG depending on the
+            // browser, so any shared cache must key on Accept.
+            ->header('Vary', 'Accept');
+    }
+
+    /**
+     * Does this browser accept WebP?
+     *
+     * WebP is roughly a third smaller, which matters on a gallery of several
+     * hundred images over a mobile connection. A browser that does not
+     * announce it — or a server that could not produce the file — gets JPEG.
+     */
+    public static function acceptsWebp(Request $request): bool
+    {
+        return str_contains(strtolower((string) $request->header('Accept')), 'image/webp');
     }
 
     /**

@@ -8,11 +8,9 @@ use App\Core\Auth;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
-use App\Core\Validator;
 use App\Core\View;
 use App\Exceptions\AuthorizationException;
 use App\Exceptions\HttpException;
-use App\Exceptions\ValidationException;
 
 /**
  * Shared controller behaviour: rendering, redirects, validation, authorisation.
@@ -51,17 +49,6 @@ abstract class Controller
         return $this->redirect($fallback);
     }
 
-    /**
-     * Validate request input, or throw.
-     *
-     * @param array<string, string> $rules
-     * @return array<string, mixed>
-     * @throws ValidationException
-     */
-    protected function validate(Request $request, array $rules, array $messages = [], array $labels = []): array
-    {
-        return Validator::make($request->all(), $rules, $messages, $labels)->validate();
-    }
 
     /**
      * Re-render a form after a validation failure.

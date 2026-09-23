@@ -139,7 +139,7 @@ final class Validator
             'boolean'   => in_array($value, [true, false, 0, 1, '0', '1', 'on', 'off', 'yes', 'no', ''], true),
             'email'     => is_string($value) && filter_var($value, FILTER_VALIDATE_EMAIL) !== false,
             'url'       => is_string($value) && filter_var($value, FILTER_VALIDATE_URL) !== false,
-            'date'      => is_string($value) && strtotime($value) !== false,
+            'date'      => is_string($value) && parse_date($value) !== false,
             'min'       => $this->compareSize($field, $value, (float) $parameter, '>='),
             'max'       => $this->compareSize($field, $value, (float) $parameter, '<='),
             'in'        => in_array((string) $value, explode(',', (string) $parameter), true),
@@ -153,8 +153,8 @@ final class Validator
             'array'     => is_array($value),
             'accepted'  => in_array($value, [true, 1, '1', 'on', 'yes'], true),
             'hex'       => is_string($value) && preg_match('/^#?[0-9a-fA-F]{3,8}$/', $value) === 1,
-            'after'     => is_string($value) && strtotime($value) !== false
-                            && strtotime($value) > strtotime($parameter === 'now' ? 'now' : (string) $parameter),
+            'after'     => is_string($value) && parse_date($value) !== false
+                            && parse_date($value) > strtotime($parameter === 'now' ? 'now' : (string) $parameter),
             default     => true,
         };
 

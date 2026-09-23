@@ -18,7 +18,8 @@ View::startSection('content');
             <a href="mailto:<?= e((string) $message['email']) ?>"><?= e((string) $message['email']) ?></a>
         </dd></div>
         <div><dt>Téléphone</dt><dd><?= e((string) ($message['phone'] ?? '')) ?: '—' ?></dd></div>
-        <div><dt>Sujet</dt><dd><?= e((string) ($message['subject'] ?? '')) ?: '—' ?></dd></div>
+        <div><dt>Type de séance</dt><dd><?= e((string) ($message['subject'] ?? '')) ?: '—' ?></dd></div>
+        <div><dt>Date souhaitée</dt><dd><?= e(format_date($message['preferred_date'] ?? null)) ?></dd></div>
         <div><dt>Reçu le</dt><dd><?= e(format_datetime((string) $message['created_at'])) ?></dd></div>
     </dl>
 

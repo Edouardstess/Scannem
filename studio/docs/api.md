@@ -21,7 +21,7 @@ CSRF, dans le champ `_token` ou dans l'en-tête `X-CSRF-Token`.
 | GET | `/services/{slug}` | Détail d'une prestation |
 | GET | `/a-propos` | Présentation |
 | GET | `/contact` | Formulaire de contact |
-| POST | `/contact` | Envoi du message |
+| POST | `/contact` | Envoi du message (nom, e-mail, téléphone, type de séance, date souhaitée, message) |
 | GET | `/reservation` | Formulaire de réservation |
 | POST | `/reservation` | Envoi de la demande |
 | GET | `/espace-client` | Saisie d'un lien ou code de galerie |
@@ -151,6 +151,11 @@ Erreurs : `422` sélection vide ou trop volumineuse, `429` trop de demandes,
 | GET | `/media/thumb/{token}` | miniature ~400 px |
 | GET | `/media/preview/{token}` | aperçu ~1600 px, filigrané si activé |
 | GET | `/media/download/{token}` | fichier original |
+
+Les deux premières négocient le format : un navigateur annonçant `image/webp`
+dans son en-tête `Accept` reçoit du WebP, les autres du JPEG. La réponse porte
+`Vary: Accept`. `/media/download` ne négocie jamais : le client demande son
+fichier, il reçoit son fichier, octet pour octet.
 
 `{token}` est une charge signée, pas un identifiant :
 

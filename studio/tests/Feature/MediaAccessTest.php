@@ -258,8 +258,56 @@ final class MediaAccessTest extends TestCase
         }, 'Knowing an image URL must not bypass the gallery password.');
     }
 
-    private static function request(): Request
+    public function testAModernBrowserIsServedWebpAndAnOldOneJpeg(): void
     {
-        return new Request('GET', '/media', [], [], ['REMOTE_ADDR' => '203.0.113.9'], [], []);
+        if (!(new \App\Services\ImageProcessingService())->supportsWebp()) {
+            $this->assertTrue(true);
+
+            return;
+        }
+
+        $gallery = Factory::gallery();
+        $photo = Factory::photo($gallery['gallery_id']);
+
+        $viewToken = (new GalleryTokenRepository())->activeFor($gallery['gallery_id'], TokenType::VIEW);
+        $token = $this->media->mint((int) $photo['id'], (int) $viewToken['id'], MediaTokenService::VARIANT_PREVIEW);
+
+        $webp = $this->controller->preview(self::request('image/webp,image/*,*/*'), ['token' => $token]);
+        $jpeg = $this->controller->preview(self::request('image/jpeg,*/*'), ['token' => $token]);
+
+        $this->assertSame('image/webp', $webp->getHeader('Content-Type'));
+        $this->assertSame('image/jpeg', $jpeg->getHeader('Content-Type'));
+
+        // One URL, two possible answers: a shared cache must key on Accept or
+        // it will hand a WebP to a browser that cannot read it.
+        $this->assertSame('Accept', $webp->getHeader('Vary'));
+        $this->assertSame('Accept', $jpeg->getHeader('Vary'));
+    }
+
+    public function testContentNegotiationNeverAppliesToOriginals(): void
+    {
+        $gallery = Factory::gallery(['download_enabled' => true]);
+        $photo = Factory::photo($gallery['gallery_id'], 'IMG_0001.jpg');
+
+        $downloadToken = (new GalleryTokenRepository())->activeFor($gallery['gallery_id'], TokenType::DOWNLOAD);
+        $token = $this->media->mint((int) $photo['id'], (int) $downloadToken['id'], MediaTokenService::VARIANT_ORIGINAL);
+
+        $response = $this->controller->download(self::request('image/webp,*/*'), ['token' => $token]);
+
+        // The client asked for their file. They get their file, byte for
+        // byte, whatever their browser would have preferred to display.
+        $this->assertSame((string) $photo['mime_type'], $response->getHeader('Content-Type'));
+        $this->assertStringContains('IMG_0001.jpg', (string) $response->getHeader('Content-Disposition'));
+    }
+
+    private static function request(string $accept = ''): Request
+    {
+        $server = ['REMOTE_ADDR' => '203.0.113.9'];
+
+        if ($accept !== '') {
+            $server['HTTP_ACCEPT'] = $accept;
+        }
+
+        return new Request('GET', '/media', [], [], $server, [], []);
     }
 }

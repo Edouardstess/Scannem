@@ -9,8 +9,8 @@ final class MessageRepository extends Repository
     protected string $table = 'messages';
 
     protected array $fillable = [
-        'name', 'email', 'phone', 'subject', 'message', 'status',
-        'ip_address', 'created_at', 'read_at',
+        'name', 'email', 'phone', 'subject', 'preferred_date', 'message',
+        'status', 'ip_address', 'created_at', 'read_at',
     ];
 
     /** @return array{rows: array<int, array<string, mixed>>, total: int} */

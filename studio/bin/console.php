@@ -211,6 +211,7 @@ try {
                 'Extension ZIP'      => (new ZipService())->isAvailable(),
                 'Extension EXIF'     => function_exists('exif_read_data'),
                 'APP_KEY définie'    => trim((string) Config::get('app.key', '')) !== '',
+                'Installateur web supprimé' => !is_file($app->basePath('public/install.php')),
                 // Only meaningful when a web server has told us where the
                 // document root is; from the command line there is nothing to
                 // compare against, so the web diagnostic panel is authoritative.

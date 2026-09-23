@@ -7,10 +7,10 @@ namespace App\Controllers\Admin;
 use App\Controllers\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Validator;
 use App\Exceptions\UploadException;
 use App\Repositories\ServiceRepository;
 use App\Services\PublicImageService;
+use App\Validators\ServiceRequest;
 
 final class ServiceAdminController extends Controller
 {
@@ -38,15 +38,14 @@ final class ServiceAdminController extends Controller
     /** POST /admin/services */
     public function store(Request $request): Response
     {
-        $validator = $this->validator($request);
+        $form = (new ServiceRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/services/create');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/services/create');
         }
 
-        $data = $validator->validated();
-        $attributes = $this->attributes($request, $data);
-        $attributes['slug'] = $this->uniqueSlug(str_slug((string) $data['title']));
+        $attributes = $form->data();
+        $attributes['slug'] = $this->uniqueSlug(str_slug((string) $attributes['title']));
         $attributes['sort_order'] = $this->services->nextSortOrder();
         $attributes['created_at'] = date('Y-m-d H:i:s');
         $attributes['updated_at'] = date('Y-m-d H:i:s');
@@ -84,19 +83,20 @@ final class ServiceAdminController extends Controller
         $id = (int) $parameters['id'];
         $service = $this->orFail($this->services->find($id), 'Prestation introuvable.');
 
-        $validator = $this->validator($request);
+        $form = (new ServiceRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/services/' . $id . '/edit');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/services/' . $id . '/edit');
         }
 
-        $data = $validator->validated();
-        $attributes = $this->attributes($request, $data);
+        $attributes = $form->data();
         $attributes['sort_order'] = $request->int('sort_order', (int) $service['sort_order']);
         $attributes['updated_at'] = date('Y-m-d H:i:s');
 
-        if ((string) $service['title'] !== (string) $data['title']) {
-            $attributes['slug'] = $this->uniqueSlug(str_slug((string) $data['title']), $id);
+        // The slug only changes when the title does, so a URL already shared
+        // keeps working through a description edit.
+        if ((string) $service['title'] !== (string) $attributes['title']) {
+            $attributes['slug'] = $this->uniqueSlug(str_slug((string) $attributes['title']), $id);
         }
 
         $image = $this->storeImage($request);
@@ -145,22 +145,6 @@ final class ServiceAdminController extends Controller
         }
     }
 
-    /** @param array<string, mixed> $data @return array<string, mixed> */
-    private function attributes(Request $request, array $data): array
-    {
-        $price = trim((string) ($data['price_from'] ?? ''));
-
-        return [
-            'title'        => (string) $data['title'],
-            'summary'      => $data['summary'] ?? null,
-            'description'  => $data['description'] ?? null,
-            'price_from'   => $price === '' ? null : (float) str_replace(',', '.', $price),
-            'currency'     => $request->string('currency', 'EUR'),
-            'duration'     => $data['duration'] ?? null,
-            'deliverables' => $data['deliverables'] ?? null,
-            'status'       => $request->string('status', 'published'),
-        ];
-    }
 
     private function uniqueSlug(string $slug, ?int $exceptId = null): string
     {
@@ -176,22 +160,4 @@ final class ServiceAdminController extends Controller
         return $candidate;
     }
 
-    private function validator(Request $request): Validator
-    {
-        return Validator::make($request->all(), [
-            'title'        => 'required|string|min:2|max:190',
-            'summary'      => 'nullable|string|max:255',
-            'description'  => 'nullable|string|max:5000',
-            'price_from'   => 'nullable|numeric|min:0',
-            'duration'     => 'nullable|string|max:80',
-            'deliverables' => 'nullable|string|max:2000',
-            'status'       => 'required|in:published,draft',
-        ], [], [
-            'title'      => 'titre',
-            'summary'    => 'résumé',
-            'price_from' => 'prix',
-            'duration'   => 'durée',
-            'status'     => 'statut',
-        ]);
-    }
 }

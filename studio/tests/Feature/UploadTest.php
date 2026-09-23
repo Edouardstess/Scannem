@@ -9,6 +9,7 @@ use App\Exceptions\StorageException;
 use App\Exceptions\UploadException;
 use App\Models\VariantType;
 use App\Repositories\PhotoRepository;
+use App\Services\ImageProcessingService;
 use App\Services\PhotoUploadService;
 use App\Services\StorageService;
 use Tests\Support\Factory;
@@ -175,14 +176,91 @@ final class UploadTest extends TestCase
             $photos->pathsFor((int) $photo['id'])
         );
 
-        $this->assertCount(3, $paths, 'An original plus two variants.');
+        // The original plus every rendition: two on a server without WebP,
+        // four where WebP companions were generated. The count is derived
+        // rather than hard-coded, so adding a rendition does not silently
+        // leave it undeleted.
+        $expected = (new ImageProcessingService())->supportsWebp() ? 5 : 3;
+
+        $this->assertCount($expected, $paths);
 
         (new PhotoUploadService())->deletePhoto((int) $photo['id']);
 
         $this->assertNull($photos->find((int) $photo['id']));
+        $this->assertCount(0, $photos->variantsFor((int) $photo['id']));
 
         foreach ($paths as $path) {
             $this->assertFalse($storage->exists($path), 'Orphan file left behind: ' . $path);
+        }
+    }
+
+    public function testWebpCompanionsAreGeneratedWhenTheServerSupportsThem(): void
+    {
+        $images = new ImageProcessingService();
+
+        if (!$images->supportsWebp()) {
+            // Nothing to assert on a host without WebP; the JPEG path is
+            // covered by the other tests and is what such a host serves.
+            $this->assertTrue(true);
+
+            return;
+        }
+
+        $gallery = Factory::gallery();
+        $photo = Factory::photo($gallery['gallery_id']);
+        $photos = new PhotoRepository();
+
+        $jpeg = $photos->variant((int) $photo['id'], VariantType::PREVIEW);
+        $webp = $photos->variant((int) $photo['id'], VariantType::PREVIEW_WEBP);
+
+        $this->assertNotNull($webp, 'A WebP companion should exist beside the JPEG preview.');
+        $this->assertSame('image/webp', (string) $webp['mime_type']);
+        $this->assertSame((int) $jpeg['width'], (int) $webp['width'], 'Both renditions must be the same size.');
+
+        // The point of the format is weight; if it is not lighter it is only
+        // costing storage.
+        $this->assertTrue(
+            (int) $webp['file_size'] < (int) $jpeg['file_size'],
+            'The WebP rendition should be smaller than the JPEG.'
+        );
+    }
+
+    public function testBestVariantFallsBackToJpegWhenNoWebpExists(): void
+    {
+        $gallery = Factory::gallery();
+        $photo = Factory::photo($gallery['gallery_id']);
+        $photos = new PhotoRepository();
+
+        // Simulate a photo imported before WebP existed, or a host that
+        // cannot produce it: the gallery must still work.
+        // Deleted by exact type rather than a LIKE pattern, because "_" is a
+        // wildcard in LIKE and escaping it portably needs an ESCAPE clause.
+        $statement = \App\Core\Database::connection()->prepare(
+            'DELETE FROM photo_variants WHERE photo_id = :id AND variant_type = :type'
+        );
+
+        foreach ([VariantType::PREVIEW_WEBP, VariantType::THUMBNAIL_WEBP] as $type) {
+            $statement->execute(['id' => (int) $photo['id'], 'type' => $type]);
+        }
+
+        $chosen = $photos->bestVariant((int) $photo['id'], VariantType::PREVIEW, true);
+
+        $this->assertNotNull($chosen);
+        $this->assertSame('image/jpeg', (string) $chosen['mime_type']);
+    }
+
+    public function testBaselineJpegIsAlwaysWrittenEvenWhenWebpIsPreferred(): void
+    {
+        $gallery = Factory::gallery();
+        $photo = Factory::photo($gallery['gallery_id']);
+        $photos = new PhotoRepository();
+
+        // A browser that does not accept WebP must always find a rendition.
+        foreach (VariantType::REQUIRED as $type) {
+            $this->assertNotNull(
+                $photos->variant((int) $photo['id'], $type),
+                'Missing baseline rendition: ' . $type
+            );
         }
     }
 

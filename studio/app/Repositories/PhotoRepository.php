@@ -201,6 +201,32 @@ final class PhotoRepository extends Repository
         );
     }
 
+    /**
+     * The lightest rendition of a type that the caller can display.
+     *
+     * Falls back to the baseline JPEG whenever the WebP companion was not
+     * generated — which is the case on a host without WebP support, and on
+     * every photo imported before the feature existed.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function bestVariant(int $photoId, string $type, bool $preferWebp): ?array
+    {
+        if ($preferWebp) {
+            $webpType = VariantType::webpOf($type);
+
+            if ($webpType !== null) {
+                $webp = $this->variant($photoId, $webpType);
+
+                if ($webp !== null) {
+                    return $webp;
+                }
+            }
+        }
+
+        return $this->variant($photoId, $type);
+    }
+
     /** @param array<string, mixed> $attributes */
     public function insertVariant(array $attributes): int
     {

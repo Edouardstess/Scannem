@@ -7,7 +7,6 @@ namespace App\Controllers\Admin;
 use App\Controllers\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Validator;
 use App\Models\AuditAction;
 use App\Models\GalleryStatus;
 use App\Models\TokenType;
@@ -17,10 +16,9 @@ use App\Repositories\PhotoRepository;
 use App\Repositories\PhotoSelectionRepository;
 use App\Services\AuditService;
 use App\Services\GalleryService;
-use App\Services\MailService;
 use App\Services\PhotoUploadService;
 use App\Services\StatisticsService;
-use App\Services\TokenService;
+use App\Validators\GalleryRequest;
 
 final class GalleryController extends Controller
 {
@@ -33,10 +31,8 @@ final class GalleryController extends Controller
         private PhotoRepository $photos = new PhotoRepository(),
         private PhotoSelectionRepository $selections = new PhotoSelectionRepository(),
         private GalleryService $service = new GalleryService(),
-        private TokenService $tokens = new TokenService(),
         private StatisticsService $statistics = new StatisticsService(),
-        private AuditService $audit = new AuditService(),
-        private MailService $mail = new MailService()
+        private AuditService $audit = new AuditService()
     ) {
     }
 
@@ -75,23 +71,13 @@ final class GalleryController extends Controller
     /** POST /admin/galleries */
     public function store(Request $request): Response
     {
-        $validator = $this->validator($request);
+        $form = (new GalleryRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/galleries/create');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/galleries/create');
         }
 
-        $attributes = $validator->validated();
-        $attributes['password'] = $request->input('password');
-        $attributes['watermark_enabled'] = $request->bool('watermark_enabled');
-        $attributes['download_enabled'] = $request->bool('download_enabled');
-        $attributes['selection_enabled'] = $request->bool('selection_enabled');
-        $attributes['expires_at'] = $this->tokens->resolveExpiry(
-            $request->string('expiry_option', 'never'),
-            $request->string('expiry_date')
-        );
-
-        $created = $this->service->create($attributes);
+        $created = $this->service->create($form->data());
 
         $this->audit->record(AuditAction::GALLERY_CREATED, $request, $created['gallery_id']);
         $this->audit->record(AuditAction::TOKEN_GENERATED, $request, $created['gallery_id'], null, [
@@ -118,7 +104,7 @@ final class GalleryController extends Controller
             'gallery'     => $gallery,
             'photos'      => $photos,
             'pagination'  => $this->paginationMeta($total, $page, self::PHOTOS_PER_PAGE),
-            'links'       => $this->shareLinks($id),
+            'links'       => (new ShareController())->links($id),
             'stats'       => $this->statistics->forGallery($id),
             'selections'  => $this->selections->selectedPhotos($id),
             'auditTrail'  => (new \App\Repositories\AuditLogRepository())->forGallery($id, 15),
@@ -145,24 +131,13 @@ final class GalleryController extends Controller
         $id = (int) $parameters['id'];
         $gallery = $this->orFail($this->galleries->find($id), 'Galerie introuvable.');
 
-        $validator = $this->validator($request);
+        $form = (new GalleryRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/galleries/' . $id . '/edit');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/galleries/' . $id . '/edit');
         }
 
-        $attributes = $validator->validated();
-        $attributes['password'] = $request->input('password');
-        $attributes['remove_password'] = $request->bool('remove_password');
-        $attributes['watermark_enabled'] = $request->bool('watermark_enabled');
-        $attributes['download_enabled'] = $request->bool('download_enabled');
-        $attributes['selection_enabled'] = $request->bool('selection_enabled');
-        $attributes['expires_at'] = $this->tokens->resolveExpiry(
-            $request->string('expiry_option', 'never'),
-            $request->string('expiry_date')
-        );
-
-        $result = $this->service->update($id, $attributes);
+        $result = $this->service->update($id, $form->data());
 
         $this->audit->record(AuditAction::GALLERY_UPDATED, $request, $id);
 
@@ -203,60 +178,8 @@ final class GalleryController extends Controller
         return $this->redirect('admin/galleries');
     }
 
-    /** GET /admin/galleries/{id}/share */
-    public function share(Request $request, array $parameters): Response
-    {
-        $id = (int) $parameters['id'];
-        $gallery = $this->orFail($this->galleries->findDetailed($id), 'Galerie introuvable.');
 
-        return $this->view('admin.galleries.share', [
-            'title'   => 'Partager — ' . (string) $gallery['title'],
-            'gallery' => $gallery,
-            'links'   => $this->shareLinks($id),
-        ]);
-    }
 
-    /** POST /admin/galleries/{id}/tokens/{type}/regenerate */
-    public function regenerateToken(Request $request, array $parameters): Response
-    {
-        $id = (int) $parameters['id'];
-        $type = strtoupper((string) $parameters['type']);
-
-        $this->orFail($this->galleries->find($id), 'Galerie introuvable.');
-
-        if (!in_array($type, TokenType::ALL, true)) {
-            $this->abort(404, 'Type de lien inconnu.');
-        }
-
-        $this->service->regenerateToken($id, $type);
-        $this->audit->record(AuditAction::TOKEN_REGENERATED, $request, $id, null, ['type' => $type]);
-
-        $this->flashSuccess(sprintf(
-            'Nouveau lien de %s généré. L\'ancien lien ne fonctionne plus.',
-            TokenType::label($type)
-        ));
-
-        return $this->redirect('admin/galleries/' . $id . '/share');
-    }
-
-    /** POST /admin/galleries/{id}/tokens/{type}/revoke */
-    public function revokeToken(Request $request, array $parameters): Response
-    {
-        $id = (int) $parameters['id'];
-        $type = strtoupper((string) $parameters['type']);
-
-        $this->orFail($this->galleries->find($id), 'Galerie introuvable.');
-
-        if (!in_array($type, TokenType::ALL, true)) {
-            $this->abort(404, 'Type de lien inconnu.');
-        }
-
-        $this->service->revokeToken($id, $type);
-        $this->audit->record(AuditAction::TOKEN_REVOKED, $request, $id, null, ['type' => $type]);
-        $this->flashSuccess(sprintf('Lien de %s désactivé.', TokenType::label($type)));
-
-        return $this->redirect('admin/galleries/' . $id . '/share');
-    }
 
     /** POST /admin/galleries/{id}/status */
     public function changeStatus(Request $request, array $parameters): Response
@@ -287,110 +210,5 @@ final class GalleryController extends Controller
         return $this->back($request, 'admin/galleries/' . $id);
     }
 
-    /** POST /admin/galleries/{id}/notify */
-    public function notifyClient(Request $request, array $parameters): Response
-    {
-        $id = (int) $parameters['id'];
-        $gallery = $this->orFail($this->galleries->findDetailed($id), 'Galerie introuvable.');
 
-        $recipient = trim((string) ($gallery['client_email'] ?? ''));
-
-        if ($recipient === '') {
-            $this->flashError("Ce client n'a pas d'adresse e-mail enregistrée.");
-
-            return $this->back($request, 'admin/galleries/' . $id . '/share');
-        }
-
-        $links = $this->shareLinks($id);
-        $kind = $request->string('kind', 'view');
-
-        if ($kind === 'download') {
-            if ($links['download']['url'] === null) {
-                $this->flashError('Aucun lien de téléchargement actif à envoyer.');
-
-                return $this->back($request, 'admin/galleries/' . $id . '/share');
-            }
-
-            $sent = $this->mail->notifyDownloadAvailable($recipient, $gallery, $links['download']['url']);
-        } else {
-            if ($links['view']['url'] === null) {
-                $this->flashError('Aucun lien de consultation actif à envoyer.');
-
-                return $this->back($request, 'admin/galleries/' . $id . '/share');
-            }
-
-            $sent = $this->mail->notifyGalleryReady($recipient, $gallery, $links['view']['url']);
-        }
-
-        $sent
-            ? $this->flashSuccess('E-mail envoyé à ' . $recipient . '.')
-            : $this->flashError("L'e-mail n'a pas pu être envoyé. Vérifiez la configuration SMTP.");
-
-        return $this->back($request, 'admin/galleries/' . $id . '/share');
-    }
-
-    /**
-     * Build the shareable URLs for a gallery.
-     *
-     * The raw token is recovered from its encrypted copy. When APP_KEY is
-     * missing or has changed, the URL is null and the view offers to
-     * regenerate — a link that cannot be displayed is never faked.
-     *
-     * @return array{view: array<string, mixed>, download: array<string, mixed>}
-     */
-    private function shareLinks(int $galleryId): array
-    {
-        $tokens = $this->service->activeTokens($galleryId);
-        $links = [];
-
-        foreach (['view' => TokenType::VIEW, 'download' => TokenType::DOWNLOAD] as $key => $type) {
-            $token = $tokens[$key];
-            $raw = $token === null ? null : $this->tokens->revealRawToken($token);
-
-            $links[$key] = [
-                'token'      => $token,
-                'raw'        => $raw,
-                'url'        => $raw === null ? null : $this->tokens->urlFor($type, $raw),
-                'expires_at' => $token === null ? null : ($token['expires_at'] ?? null),
-                'last_used_at' => $token === null ? null : ($token['last_used_at'] ?? null),
-                'use_count'  => $token === null ? 0 : (int) $token['use_count'],
-            ];
-        }
-
-        return $links;
-    }
-
-    private function validator(Request $request): Validator
-    {
-        $validator = Validator::make($request->all(), [
-            'event_id'    => 'required|integer',
-            'title'       => 'required|string|min:2|max:190',
-            'description' => 'nullable|string|max:5000',
-            'status'      => 'required|in:' . implode(',', GalleryStatus::ALL),
-            'password'    => 'nullable|string|min:6|max:255',
-        ], [
-            'password.min' => 'Le mot de passe de galerie doit contenir au moins 6 caractères.',
-        ], [
-            'event_id' => 'événement',
-            'title'    => 'titre',
-            'status'   => 'statut',
-            'password' => 'mot de passe',
-        ]);
-
-        if ($validator->passes() && $this->events->find($request->int('event_id')) === null) {
-            $validator->addError('event_id', "Cet événement n'existe pas.");
-        }
-
-        if ($request->string('expiry_option') === 'custom') {
-            $date = $request->string('expiry_date');
-
-            if ($date === '' || strtotime($date) === false) {
-                $validator->addError('expiry_date', 'Indiquez une date d\'expiration valide.');
-            } elseif (strtotime($date) < time()) {
-                $validator->addError('expiry_date', 'La date d\'expiration doit être dans le futur.');
-            }
-        }
-
-        return $validator;
-    }
 }

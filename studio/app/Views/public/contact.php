@@ -75,6 +75,16 @@ View::startSection('content');
                 </div>
 
                 <div class="field">
+                    <label for="preferred_date">Date souhaitée</label>
+                    <input type="date" id="preferred_date" name="preferred_date"
+                           min="<?= e(date('Y-m-d')) ?>" value="<?= e(old('preferred_date')) ?>">
+                    <p class="field__hint">Si vous avez déjà une date en tête.</p>
+                    <?php if ($message = error_for('preferred_date')): ?>
+                        <p class="field__error"><?= e($message) ?></p>
+                    <?php endif; ?>
+                </div>
+
+                <div class="field">
                     <label for="message">Message <span aria-hidden="true">*</span></label>
                     <textarea id="message" name="message" rows="7" required
                               minlength="10" maxlength="5000"

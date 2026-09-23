@@ -37,6 +37,7 @@ $labels = ['new' => 'Nouveaux', 'read' => 'Lus', 'archived' => 'Archivés'];
                     <tr>
                         <th scope="col">Expéditeur</th>
                         <th scope="col">Sujet</th>
+                        <th scope="col">Date souhaitée</th>
                         <th scope="col">Reçu le</th>
                         <th scope="col">Statut</th>
                     </tr>
@@ -54,6 +55,7 @@ $labels = ['new' => 'Nouveaux', 'read' => 'Lus', 'archived' => 'Archivés'];
                                 <?= e((string) ($message['subject'] ?? '')) ?: '—' ?>
                                 <span class="table__sub"><?= e(str_excerpt((string) $message['message'], 70)) ?></span>
                             </td>
+                            <td><?= e(format_date($message['preferred_date'] ?? null)) ?></td>
                             <td><?= e(format_datetime((string) $message['created_at'])) ?></td>
                             <td>
                                 <span class="badge badge--<?= (string) $message['status'] === 'new' ? 'active' : 'draft' ?>">

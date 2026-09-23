@@ -7,12 +7,13 @@ namespace App\Controllers\Admin;
 use App\Controllers\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Validator;
 use App\Exceptions\UploadException;
 use App\Models\AuditAction;
 use App\Repositories\PortfolioRepository;
 use App\Services\AuditService;
 use App\Services\PublicImageService;
+use App\Validators\PortfolioCategoryRequest;
+use App\Validators\PortfolioItemRequest;
 
 final class PortfolioAdminController extends Controller
 {
@@ -46,10 +47,10 @@ final class PortfolioAdminController extends Controller
     /** POST /admin/portfolio */
     public function store(Request $request): Response
     {
-        $validator = $this->itemValidator($request);
+        $form = (new PortfolioItemRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/portfolio/create');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/portfolio/create');
         }
 
         $file = $request->file('image');
@@ -64,19 +65,12 @@ final class PortfolioAdminController extends Controller
             return $this->redirectWithErrors($request, ['image' => $e->getMessage()], 'admin/portfolio/create');
         }
 
-        $data = $validator->validated();
-
-        $id = $this->portfolio->insert([
-            'category_id'    => $this->categoryId($request),
-            'title'          => (string) $data['title'],
-            'description'    => $data['description'] ?? null,
+        $id = $this->portfolio->insert($form->data() + [
             'image_path'     => $stored['path'],
             'thumbnail_path' => $stored['thumbnail'],
             'width'          => $stored['width'],
             'height'         => $stored['height'],
-            'featured'       => $request->bool('featured') ? 1 : 0,
             'sort_order'     => $this->portfolio->nextSortOrder(),
-            'status'         => $request->string('status', 'published'),
             'created_at'     => date('Y-m-d H:i:s'),
             'updated_at'     => date('Y-m-d H:i:s'),
         ]);
@@ -105,22 +99,15 @@ final class PortfolioAdminController extends Controller
         $id = (int) $parameters['id'];
         $item = $this->orFail($this->portfolio->findItem($id), 'Élément introuvable.');
 
-        $validator = $this->itemValidator($request);
+        $form = (new PortfolioItemRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/portfolio/' . $id . '/edit');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/portfolio/' . $id . '/edit');
         }
 
-        $data = $validator->validated();
-
-        $attributes = [
-            'category_id' => $this->categoryId($request),
-            'title'       => (string) $data['title'],
-            'description' => $data['description'] ?? null,
-            'featured'    => $request->bool('featured') ? 1 : 0,
-            'status'      => $request->string('status', 'published'),
-            'sort_order'  => $request->int('sort_order', (int) $item['sort_order']),
-            'updated_at'  => date('Y-m-d H:i:s'),
+        $attributes = $form->data() + [
+            'sort_order' => $request->int('sort_order', (int) $item['sort_order']),
+            'updated_at' => date('Y-m-d H:i:s'),
         ];
 
         $file = $request->file('image');
@@ -178,26 +165,16 @@ final class PortfolioAdminController extends Controller
     /** POST /admin/portfolio/categories */
     public function storeCategory(Request $request): Response
     {
-        $validator = Validator::make($request->all(), [
-            'name'        => 'required|string|min:2|max:120',
-            'description' => 'nullable|string|max:1000',
-            'status'      => 'required|in:published,draft',
-        ], [], ['name' => 'nom', 'status' => 'statut']);
+        $form = (new PortfolioCategoryRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/portfolio/categories');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/portfolio/categories');
         }
 
-        $name = (string) $validator->validated()['name'];
-        $slug = $this->uniqueSlug(str_slug($name));
-
-        $this->portfolio->createCategory([
-            'name'        => $name,
-            'slug'        => $slug,
-            'description' => $validator->validated()['description'] ?? null,
-            'sort_order'  => $this->portfolio->nextCategorySortOrder(),
-            'status'      => $request->string('status', 'published'),
-            'created_at'  => date('Y-m-d H:i:s'),
+        $this->portfolio->createCategory($form->data() + [
+            'slug'       => $this->uniqueSlug(str_slug((string) $form->value('name'))),
+            'sort_order' => $this->portfolio->nextCategorySortOrder(),
+            'created_at' => date('Y-m-d H:i:s'),
         ]);
 
         $this->flashSuccess('Catégorie créée.');
@@ -211,17 +188,13 @@ final class PortfolioAdminController extends Controller
         $id = (int) $parameters['id'];
         $category = $this->orFail($this->portfolio->findCategory($id), 'Catégorie introuvable.');
 
-        $validator = Validator::make($request->all(), [
-            'name'        => 'required|string|min:2|max:120',
-            'description' => 'nullable|string|max:1000',
-            'status'      => 'required|in:published,draft',
-        ], [], ['name' => 'nom', 'status' => 'statut']);
+        $form = (new PortfolioCategoryRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/portfolio/categories');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/portfolio/categories');
         }
 
-        $name = (string) $validator->validated()['name'];
+        $name = (string) $form->value('name');
 
         // The slug only changes when the name does, so public URLs that were
         // already shared keep working through a description edit.
@@ -229,12 +202,9 @@ final class PortfolioAdminController extends Controller
             ? (string) $category['slug']
             : $this->uniqueSlug(str_slug($name), $id);
 
-        $this->portfolio->updateCategory($id, [
-            'name'        => $name,
-            'slug'        => $slug,
-            'description' => $validator->validated()['description'] ?? null,
-            'status'      => $request->string('status', 'published'),
-            'sort_order'  => $request->int('sort_order', (int) $category['sort_order']),
+        $this->portfolio->updateCategory($id, $form->data() + [
+            'slug'       => $slug,
+            'sort_order' => $request->int('sort_order', (int) $category['sort_order']),
         ]);
 
         $this->flashSuccess('Catégorie mise à jour.');
@@ -270,20 +240,5 @@ final class PortfolioAdminController extends Controller
         return $candidate;
     }
 
-    private function categoryId(Request $request): ?int
-    {
-        $id = $request->int('category_id');
 
-        return $id > 0 && $this->portfolio->findCategory($id) !== null ? $id : null;
-    }
-
-    private function itemValidator(Request $request): Validator
-    {
-        return Validator::make($request->all(), [
-            'title'       => 'required|string|min:2|max:190',
-            'description' => 'nullable|string|max:2000',
-            'category_id' => 'nullable|integer',
-            'status'      => 'required|in:published,draft',
-        ], [], ['title' => 'titre', 'status' => 'statut', 'category_id' => 'catégorie']);
-    }
 }

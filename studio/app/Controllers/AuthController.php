@@ -8,10 +8,11 @@ use App\Core\Auth;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
-use App\Core\Validator;
 use App\Models\AuditAction;
 use App\Services\AuditService;
 use App\Services\RateLimiter;
+use App\Validators\LoginRequest;
+use App\Validators\PasswordChangeRequest;
 
 /**
  * Administrator authentication.
@@ -33,17 +34,14 @@ final class AuthController extends Controller
     /** POST /admin/login */
     public function login(Request $request): Response
     {
-        $validator = Validator::make($request->all(), [
-            'email'    => 'required|email|max:190',
-            'password' => 'required|string|max:255',
-        ], [], ['email' => 'e-mail', 'password' => 'mot de passe']);
+        $form = (new LoginRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->loginFailure($request, $validator->errors());
+        if ($form->fails()) {
+            return $this->loginFailure($request, $form->errors());
         }
 
-        $email = strtolower((string) $request->input('email'));
-        $password = (string) $request->input('password');
+        $email = (string) $form->value('email');
+        $password = (string) $form->value('password');
 
         // Throttle per e-mail *and* per IP. Per-IP alone lets an attacker
         // spread one password across many accounts; per-e-mail alone lets
@@ -118,21 +116,13 @@ final class AuthController extends Controller
             return $this->redirect('admin/login');
         }
 
-        $validator = Validator::make($request->all(), [
-            'current_password' => 'required|string',
-            'password'         => 'required|string|min:10|max:255|confirmed',
-        ], [
-            'password.min' => 'Le nouveau mot de passe doit contenir au moins 10 caractères.',
-        ], [
-            'current_password' => 'mot de passe actuel',
-            'password'         => 'nouveau mot de passe',
-        ]);
+        $form = (new PasswordChangeRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/profile');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/profile');
         }
 
-        if (!password_verify((string) $request->input('current_password'), (string) $user['password_hash'])) {
+        if (!password_verify((string) $form->value('current_password'), (string) $user['password_hash'])) {
             return $this->redirectWithErrors(
                 $request,
                 ['current_password' => 'Mot de passe actuel incorrect.'],
@@ -142,7 +132,7 @@ final class AuthController extends Controller
 
         (new \App\Repositories\UserRepository())->updatePassword(
             (int) $user['id'],
-            (string) $request->input('password')
+            (string) $form->value('password')
         );
 
         // Changing a password invalidates any other session riding the old

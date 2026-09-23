@@ -7,7 +7,6 @@ namespace App\Controllers\Admin;
 use App\Controllers\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Validator;
 use App\Models\AuditAction;
 use App\Models\EventStatus;
 use App\Repositories\ClientRepository;
@@ -16,6 +15,7 @@ use App\Repositories\GalleryRepository;
 use App\Services\AuditService;
 use App\Services\EventService;
 use App\Services\GalleryService;
+use App\Validators\EventRequest;
 
 final class EventController extends Controller
 {
@@ -66,13 +66,13 @@ final class EventController extends Controller
     /** POST /admin/events */
     public function store(Request $request): Response
     {
-        $validator = $this->validator($request);
+        $form = (new EventRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/events/create');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/events/create');
         }
 
-        $id = $this->service->create($validator->validated());
+        $id = $this->service->create($form->data());
         $this->audit->record(AuditAction::EVENT_CREATED, $request, null, null, ['event_id' => $id]);
         $this->flashSuccess('Événement créé.');
 
@@ -113,13 +113,13 @@ final class EventController extends Controller
         $id = (int) $parameters['id'];
         $this->orFail($this->events->find($id), 'Événement introuvable.');
 
-        $validator = $this->validator($request);
+        $form = (new EventRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/events/' . $id . '/edit');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/events/' . $id . '/edit');
         }
 
-        $this->service->update($id, $validator->validated());
+        $this->service->update($id, $form->data());
         $this->audit->record(AuditAction::EVENT_UPDATED, $request, null, null, ['event_id' => $id]);
         $this->flashSuccess('Événement mis à jour.');
 
@@ -146,28 +146,4 @@ final class EventController extends Controller
         return $this->redirect('admin/events');
     }
 
-    private function validator(Request $request): Validator
-    {
-        $validator = Validator::make($request->all(), [
-            'client_id'   => 'required|integer',
-            'title'       => 'required|string|min:2|max:190',
-            'description' => 'nullable|string|max:5000',
-            'event_type'  => 'nullable|string|max:50',
-            'event_date'  => 'nullable|date',
-            'location'    => 'nullable|string|max:190',
-            'status'      => 'required|in:' . implode(',', EventStatus::ALL),
-        ], [], [
-            'client_id'  => 'client',
-            'title'      => 'titre',
-            'event_date' => 'date',
-            'location'   => 'lieu',
-            'status'     => 'statut',
-        ]);
-
-        if ($validator->passes() && $this->clients->find($request->int('client_id')) === null) {
-            $validator->addError('client_id', 'Ce client n\'existe pas.');
-        }
-
-        return $validator;
-    }
 }

@@ -50,7 +50,16 @@ final class EventService
         return $this->events->delete($id);
     }
 
-    /** @param array<string, mixed> $attributes @return array<string, mixed> */
+    /**
+     * Normalise the attributes a caller supplied.
+     *
+     * Duplicates what the matching FormRequest already does, deliberately:
+     * this service is also called from the seeder and the command line, where
+     * no form ran. Normalising twice is a no-op; assuming it happened is not.
+     *
+     * @param array<string, mixed> $attributes
+     * @return array<string, mixed>
+     */
     private function normalise(array $attributes): array
     {
         $status = (string) ($attributes['status'] ?? EventStatus::DRAFT);
@@ -61,7 +70,9 @@ final class EventService
             'title'       => trim((string) ($attributes['title'] ?? '')),
             'description' => $this->nullIfBlank($attributes['description'] ?? null),
             'event_type'  => $this->nullIfBlank($attributes['event_type'] ?? null),
-            'event_date'  => $date === '' ? null : date('Y-m-d', (int) strtotime($date)),
+            'event_date'  => $date === '' || parse_date($date) === false
+                ? null
+                : date('Y-m-d', (int) parse_date($date)),
             'location'    => $this->nullIfBlank($attributes['location'] ?? null),
             'status'      => in_array($status, EventStatus::ALL, true) ? $status : EventStatus::DRAFT,
         ];

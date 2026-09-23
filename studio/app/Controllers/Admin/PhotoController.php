@@ -111,7 +111,12 @@ final class PhotoController extends Controller
     public function thumbnail(Request $request, array $parameters): Response
     {
         $photo = $this->orFail($this->photos->find((int) $parameters['id']), 'Photo introuvable.');
-        $variant = $this->photos->variant((int) $photo['id'], VariantType::THUMBNAIL);
+
+        $variant = $this->photos->bestVariant(
+            (int) $photo['id'],
+            VariantType::THUMBNAIL,
+            \App\Controllers\MediaController::acceptsWebp($request)
+        );
 
         if ($variant === null) {
             $this->abort(404, 'Miniature indisponible.');
@@ -124,14 +129,19 @@ final class PhotoController extends Controller
             'inline',
             true,
             $request
-        );
+        )->header('Vary', 'Accept');
     }
 
     /** GET /admin/photos/{id}/preview */
     public function preview(Request $request, array $parameters): Response
     {
         $photo = $this->orFail($this->photos->find((int) $parameters['id']), 'Photo introuvable.');
-        $variant = $this->photos->variant((int) $photo['id'], VariantType::PREVIEW);
+
+        $variant = $this->photos->bestVariant(
+            (int) $photo['id'],
+            VariantType::PREVIEW,
+            \App\Controllers\MediaController::acceptsWebp($request)
+        );
 
         if ($variant === null) {
             $this->abort(404, 'Aperçu indisponible.');
@@ -144,7 +154,7 @@ final class PhotoController extends Controller
             'inline',
             true,
             $request
-        );
+        )->header('Vary', 'Accept');
     }
 
     /** GET /admin/photos/{id}/original — the photographer's own download. */

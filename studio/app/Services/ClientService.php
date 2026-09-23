@@ -43,7 +43,16 @@ final class ClientService
         return trim(((string) ($client['first_name'] ?? '')) . ' ' . ((string) ($client['last_name'] ?? '')));
     }
 
-    /** @param array<string, mixed> $attributes @return array<string, mixed> */
+    /**
+     * Normalise the attributes a caller supplied.
+     *
+     * Duplicates what the matching FormRequest already does, deliberately:
+     * this service is also called from the seeder and the command line, where
+     * no form ran. Normalising twice is a no-op; assuming it happened is not.
+     *
+     * @param array<string, mixed> $attributes
+     * @return array<string, mixed>
+     */
     private function normalise(array $attributes): array
     {
         $email = isset($attributes['email']) ? strtolower(trim((string) $attributes['email'])) : null;

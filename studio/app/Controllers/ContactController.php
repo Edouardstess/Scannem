@@ -6,12 +6,12 @@ namespace App\Controllers;
 
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Validator;
 use App\Repositories\MessageRepository;
 use App\Repositories\ServiceRepository;
 use App\Services\MailService;
 use App\Services\RateLimiter;
 use App\Services\SettingsService;
+use App\Validators\ContactRequest;
 
 /**
  * Public contact form.
@@ -32,6 +32,33 @@ final class ContactController extends Controller
         private MailService $mail = new MailService(),
         private SettingsService $settings = new SettingsService()
     ) {
+    }
+
+    /**
+     * Fold the optional fields into the notification body.
+     *
+     * The photographer reads one e-mail; a desired date buried in a column
+     * they never see is a date they will miss.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function mailBody(array $data): string
+    {
+        $lines = [(string) $data['message']];
+
+        if (($data['subject'] ?? null) !== null) {
+            $lines[] = 'Type de séance : ' . (string) $data['subject'];
+        }
+
+        if (($data['preferred_date'] ?? null) !== null) {
+            $lines[] = 'Date souhaitée : ' . format_date((string) $data['preferred_date']);
+        }
+
+        if (($data['phone'] ?? null) !== null) {
+            $lines[] = 'Téléphone : ' . (string) $data['phone'];
+        }
+
+        return implode("\n\n", $lines);
     }
 
     /** GET /contact */
@@ -61,33 +88,16 @@ final class ContactController extends Controller
             ], 'contact');
         }
 
-        $validator = Validator::make($request->all(), [
-            'name'    => 'required|string|min:2|max:150',
-            'email'   => 'required|email|max:190',
-            'phone'   => 'nullable|phone',
-            'subject' => 'nullable|string|max:190',
-            'message' => 'required|string|min:10|max:5000',
-        ], [], [
-            'name'    => 'nom',
-            'email'   => 'e-mail',
-            'phone'   => 'téléphone',
-            'subject' => 'sujet',
-            'message' => 'message',
-        ]);
+        $form = (new ContactRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'contact');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'contact');
         }
 
-        $data = $validator->validated();
+        $data = $form->data();
         $this->limiter->hit($limiterKey, 3600);
 
-        $id = $this->messages->insert([
-            'name'       => (string) $data['name'],
-            'email'      => strtolower((string) $data['email']),
-            'phone'      => $data['phone'] ?? null,
-            'subject'    => $data['subject'] ?? null,
-            'message'    => (string) $data['message'],
+        $this->messages->insert($data + [
             'status'     => 'new',
             'ip_address' => $request->ip(),
             'created_at' => date('Y-m-d H:i:s'),
@@ -99,11 +109,10 @@ final class ContactController extends Controller
             $this->mail->notifyNewMessage($recipient, [
                 'name'    => $data['name'],
                 'email'   => $data['email'],
-                'message' => $data['message'],
+                'message' => $this->mailBody($data),
             ]);
         }
 
-        unset($id);
         $this->flashSuccess('Merci, votre message a bien été envoyé. Nous vous répondrons rapidement.');
 
         return $this->redirect('contact?sent=1');

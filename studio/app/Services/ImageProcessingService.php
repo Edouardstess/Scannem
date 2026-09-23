@@ -48,6 +48,26 @@ final class ImageProcessingService
     }
 
     /**
+     * Can this server write WebP?
+     *
+     * GD is compiled with WebP support on most modern hosts but not all, and
+     * Imagick depends on the delegates ImageMagick was built with. Both are
+     * checked at runtime rather than assumed.
+     */
+    public function supportsWebp(): bool
+    {
+        if (!(bool) Config::get('storage.webp_enabled', true)) {
+            return false;
+        }
+
+        return match ($this->driver()) {
+            self::DRIVER_IMAGICK => in_array('WEBP', array_map('strtoupper', \Imagick::queryFormats('WEBP')), true),
+            self::DRIVER_GD      => function_exists('imagewebp'),
+            default              => false,
+        };
+    }
+
+    /**
      * Read the dimensions, MIME type and capture date of an image.
      *
      * GPS tags are deliberately not returned: they are read from the file but
@@ -160,7 +180,8 @@ final class ImageProcessingService
     /**
      * Write a resized copy of an image.
      *
-     * @param  bool $watermark Apply the studio watermark to the output.
+     * @param  bool   $watermark Apply the studio watermark to the output.
+     * @param  string $format 'jpeg' or 'webp'.
      * @return array{width: int, height: int, bytes: int, mime: string}
      * @throws StorageException when no imaging engine can read the source.
      */
@@ -170,7 +191,8 @@ final class ImageProcessingService
         int $maxWidth,
         int $quality,
         bool $watermark = false,
-        string $watermarkText = ''
+        string $watermarkText = '',
+        string $format = 'jpeg'
     ): array {
         $directory = dirname($destinationPath);
 
@@ -178,12 +200,14 @@ final class ImageProcessingService
             throw new StorageException('Unable to create variant directory: ' . $directory);
         }
 
+        $format = $format === 'webp' ? 'webp' : 'jpeg';
+
         return match ($this->driver()) {
             self::DRIVER_IMAGICK => $this->makeVariantImagick(
-                $sourcePath, $destinationPath, $maxWidth, $quality, $watermark, $watermarkText
+                $sourcePath, $destinationPath, $maxWidth, $quality, $watermark, $watermarkText, $format
             ),
             self::DRIVER_GD => $this->makeVariantGd(
-                $sourcePath, $destinationPath, $maxWidth, $quality, $watermark, $watermarkText
+                $sourcePath, $destinationPath, $maxWidth, $quality, $watermark, $watermarkText, $format
             ),
             default => throw new StorageException(
                 'No image processing extension available. Enable GD or Imagick.'
@@ -198,7 +222,8 @@ final class ImageProcessingService
         int $maxWidth,
         int $quality,
         bool $watermark,
-        string $watermarkText
+        string $watermarkText,
+        string $format = 'jpeg'
     ): array {
         $image = new \Imagick();
 
@@ -216,7 +241,7 @@ final class ImageProcessingService
             [$targetWidth, $targetHeight] = $this->scaledSize($width, $height, $maxWidth);
 
             $image->resizeImage($targetWidth, $targetHeight, \Imagick::FILTER_LANCZOS, 1);
-            $image->setImageFormat('jpeg');
+            $image->setImageFormat($format);
             $image->setImageCompressionQuality(max(1, min(100, $quality)));
 
             if ($watermark && $watermarkText !== '') {
@@ -229,7 +254,7 @@ final class ImageProcessingService
                 'width'  => $targetWidth,
                 'height' => $targetHeight,
                 'bytes'  => (int) (@filesize($destinationPath) ?: 0),
-                'mime'   => 'image/jpeg',
+                'mime'   => 'image/' . $format,
             ];
         } finally {
             $image->clear();
@@ -248,7 +273,8 @@ final class ImageProcessingService
         int $maxWidth,
         int $quality,
         bool $watermark,
-        string $watermarkText
+        string $watermarkText,
+        string $format = 'jpeg'
     ): array {
         $source = $this->openGdImage($sourcePath);
 
@@ -272,7 +298,11 @@ final class ImageProcessingService
                 $this->watermark->applyGd($canvas, $watermarkText);
             }
 
-            if (!imagejpeg($canvas, $destinationPath, max(1, min(100, $quality)))) {
+            $written = $format === 'webp' && function_exists('imagewebp')
+                ? imagewebp($canvas, $destinationPath, max(1, min(100, $quality)))
+                : imagejpeg($canvas, $destinationPath, max(1, min(100, $quality)));
+
+            if (!$written) {
                 throw new StorageException('Unable to write image variant.');
             }
 
@@ -282,7 +312,7 @@ final class ImageProcessingService
                 'width'  => $targetWidth,
                 'height' => $targetHeight,
                 'bytes'  => (int) (@filesize($destinationPath) ?: 0),
-                'mime'   => 'image/jpeg',
+                'mime'   => 'image/' . $format,
             ];
         } finally {
             if (is_object($source)) {

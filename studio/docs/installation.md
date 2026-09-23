@@ -98,6 +98,29 @@ site en service tant que ce point n'est pas vert.
 
 ## 5. Installation
 
+### Par le navigateur (sans SSH)
+
+Ouvrez `https://votre-domaine/install.php`. Trois étapes :
+
+1. **Vérifications** — ce que votre hébergeur fournit et ce qui manque. Les
+   points marqués « bloquant » doivent être réglés avant de continuer ; ceux
+   marqués « optionnel » dégradent une fonction sans empêcher l'installation.
+2. **Base de données** — adresse publique du site et identifiants MySQL. La
+   connexion est testée avant que quoi que ce soit ne soit écrit.
+3. **Compte administrateur** — le vôtre. Dix caractères minimum.
+
+L'installateur écrit alors `.env` (avec un `APP_KEY` généré), applique les
+migrations, insère les paramètres par défaut et crée votre compte.
+
+**Supprimez `public/install.php` immédiatement après.**
+
+Il refuse de s'exécuter dès qu'un compte existe — y compris si son fichier
+verrou a été effacé — mais un installateur accessible reste une surface
+d'attaque inutile. L'écran `/admin/settings` affiche un point rouge tant qu'il
+est présent, et `php bin/console.php check` sort en erreur.
+
+### Par la ligne de commande
+
 ```bash
 php bin/console.php install
 ```
@@ -253,7 +276,8 @@ un mutualisé mais moins fiable pour la délivrabilité.
 
 Dans l'ordre, après installation :
 
-1. `php bin/console.php check` — tout doit être `[OK]`.
+1. `php bin/console.php check` — tout doit être `[OK]`, y compris
+   « Installateur web supprimé ».
 2. Ouvrir `/` : la page d'accueil s'affiche.
 3. Se connecter sur `/admin`.
 4. Ouvrir `/admin/settings` : le diagnostic ne doit afficher aucun point rouge.
@@ -266,6 +290,8 @@ Dans l'ordre, après installation :
 9. Activer le téléchargement sur la galerie, ouvrir le lien de téléchargement :
    récupérer une photo, puis l'archive complète.
 10. Révoquer le lien de consultation, le recharger : il doit être refusé.
+11. Vérifier que `https://votre-domaine/install.php` renvoie 404, ou au moins
+    l'écran « Cette installation est déjà effectuée ».
 
 Si le point 8 ne se comporte pas comme décrit, n'ouvrez pas le service.
 

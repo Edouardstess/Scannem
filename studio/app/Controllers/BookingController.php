@@ -6,12 +6,12 @@ namespace App\Controllers;
 
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Validator;
 use App\Repositories\BookingRepository;
 use App\Repositories\ServiceRepository;
 use App\Services\MailService;
 use App\Services\RateLimiter;
 use App\Services\SettingsService;
+use App\Validators\BookingRequest;
 
 /**
  * Session booking requests.
@@ -66,49 +66,19 @@ final class BookingController extends Controller
             ], 'reservation');
         }
 
-        $validator = Validator::make($request->all(), [
-            'name'           => 'required|string|min:2|max:150',
-            'email'          => 'required|email|max:190',
-            'phone'          => 'nullable|phone',
-            'service_id'     => 'nullable|integer',
-            'preferred_date' => 'nullable|date',
-            'location'       => 'nullable|string|max:190',
-            'message'        => 'nullable|string|max:5000',
-        ], [], [
-            'name'           => 'nom',
-            'email'          => 'e-mail',
-            'phone'          => 'téléphone',
-            'preferred_date' => 'date souhaitée',
-            'location'       => 'lieu',
-            'message'        => 'message',
-        ]);
+        $form = (new BookingRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'reservation');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'reservation');
         }
 
-        $data = $validator->validated();
+        $data = $form->data();
         $this->limiter->hit($limiterKey, 3600);
 
-        // The service is resolved against the database rather than trusted
-        // from the form, so a tampered id cannot invent a prestation.
-        $serviceId = isset($data['service_id']) ? (int) $data['service_id'] : 0;
-        $service = $serviceId > 0 ? $this->services->find($serviceId) : null;
-
-        $preferredDate = $data['preferred_date'] ?? null;
-
-        $this->bookings->insert([
-            'name'           => (string) $data['name'],
-            'email'          => strtolower((string) $data['email']),
-            'phone'          => $data['phone'] ?? null,
-            'service_id'     => $service === null ? null : (int) $service['id'],
-            'service_label'  => $service === null ? null : (string) $service['title'],
-            'preferred_date' => $preferredDate === null ? null : date('Y-m-d', (int) strtotime((string) $preferredDate)),
-            'location'       => $data['location'] ?? null,
-            'message'        => $data['message'] ?? null,
-            'status'         => 'pending',
-            'ip_address'     => $request->ip(),
-            'created_at'     => date('Y-m-d H:i:s'),
+        $this->bookings->insert($data + [
+            'status'     => 'pending',
+            'ip_address' => $request->ip(),
+            'created_at' => date('Y-m-d H:i:s'),
         ]);
 
         $recipient = trim((string) $this->settings->get('contact_email', ''));
@@ -119,8 +89,8 @@ final class BookingController extends Controller
                 'email'   => $data['email'],
                 'message' => sprintf(
                     "Demande de réservation.\nPrestation : %s\nDate souhaitée : %s\nLieu : %s\n\n%s",
-                    $service === null ? 'non précisée' : (string) $service['title'],
-                    $preferredDate ?? 'non précisée',
+                    $data['service_label'] ?? 'non précisée',
+                    $data['preferred_date'] === null ? 'non précisée' : format_date((string) $data['preferred_date']),
                     $data['location'] ?? 'non précisé',
                     $data['message'] ?? ''
                 ),

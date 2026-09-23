@@ -24,6 +24,12 @@ return [
     'preview_quality' => Config::envInt('PREVIEW_QUALITY', 82),
     'thumbnail_quality' => Config::envInt('THUMBNAIL_QUALITY', 78),
 
+    // A WebP companion is written beside each JPEG rendition when the server
+    // can produce one, and served only to browsers that accept the format.
+    // Roughly a third lighter, for about a third more derivative storage.
+    'webp_enabled' => Config::envBool('WEBP_ENABLED', true),
+    'webp_quality' => Config::envInt('WEBP_QUALITY', 80),
+
     // Temporary ZIP archives are deleted after this many seconds.
     'zip_ttl_seconds' => Config::envInt('ZIP_TTL_SECONDS', 3600),
     'zip_max_bytes'   => Config::envInt('ZIP_MAX_BYTES', 4 * 1024 * 1024 * 1024),

@@ -148,13 +148,12 @@ final class PhotoUploadService
         $watermarkEnabled = (bool) ($gallery['watermark_enabled'] ?? false);
         $watermarkText = $watermarkEnabled ? $this->settings->watermarkText() : '';
 
-        // Derivatives are always JPEG: it is the one format every browser and
-        // every GD build handles, and these are display copies, not masters.
-        $variantFilename = pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+        // JPEG is the baseline: every browser and every GD build handles it.
+        $base = pathinfo($filename, PATHINFO_FILENAME);
 
         $definitions = [
             VariantType::THUMBNAIL => [
-                'relative'  => $this->storage->thumbnailPath($galleryId, $variantFilename),
+                'directory' => 'thumbnail',
                 'width'     => (int) Config::get('storage.thumbnail_width', 400),
                 'quality'   => (int) Config::get('storage.thumbnail_quality', 78),
                 // Thumbnails are small contact-sheet tiles; a watermark on them
@@ -162,7 +161,7 @@ final class PhotoUploadService
                 'watermark' => false,
             ],
             VariantType::PREVIEW => [
-                'relative'  => $this->storage->previewPath($galleryId, $variantFilename),
+                'directory' => 'preview',
                 'width'     => (int) Config::get('storage.preview_width', 1600),
                 'quality'   => (int) Config::get('storage.preview_quality', 82),
                 'watermark' => $watermarkEnabled,
@@ -170,30 +169,85 @@ final class PhotoUploadService
         ];
 
         $this->photos->deleteVariants($photoId);
+        $webpSupported = $this->images->supportsWebp();
 
         foreach ($definitions as $type => $definition) {
-            $destination = $this->storage->absolute($definition['relative']);
+            $this->writeVariant($photoId, $galleryId, $type, $base, 'jpeg', $definition, $absoluteOriginal, $watermarkText);
 
-            $result = $this->images->makeVariant(
-                $absoluteOriginal,
-                $destination,
-                $definition['width'],
-                $definition['quality'],
-                $definition['watermark'],
-                $watermarkText
-            );
+            if (!$webpSupported) {
+                continue;
+            }
 
-            $this->photos->insertVariant([
-                'photo_id'     => $photoId,
-                'variant_type' => $type,
-                'storage_path' => $definition['relative'],
-                'mime_type'    => $result['mime'],
-                'width'        => $result['width'],
-                'height'       => $result['height'],
-                'file_size'    => $result['bytes'],
-                'created_at'   => date('Y-m-d H:i:s'),
-            ]);
+            $webpType = VariantType::webpOf($type);
+
+            if ($webpType === null) {
+                continue;
+            }
+
+            try {
+                $this->writeVariant(
+                    $photoId,
+                    $galleryId,
+                    $webpType,
+                    $base,
+                    'webp',
+                    $definition,
+                    $absoluteOriginal,
+                    $watermarkText
+                );
+            } catch (\Throwable $e) {
+                // A missing WebP companion costs bandwidth, not correctness:
+                // the JPEG is already written and the gallery works.
+                Logger::warning('WebP variant could not be generated', [
+                    'photo_id' => $photoId,
+                    'error'    => $e->getMessage(),
+                ]);
+            }
         }
+    }
+
+    /**
+     * Render one rendition and record it.
+     *
+     * @param array{directory: string, width: int, quality: int, watermark: bool} $definition
+     */
+    private function writeVariant(
+        int $photoId,
+        int $galleryId,
+        string $type,
+        string $basename,
+        string $format,
+        array $definition,
+        string $absoluteOriginal,
+        string $watermarkText
+    ): void {
+        $extension = $format === 'webp' ? '.webp' : '.jpg';
+        $filename = $basename . $extension;
+
+        $relative = $definition['directory'] === 'thumbnail'
+            ? $this->storage->thumbnailPath($galleryId, $filename)
+            : $this->storage->previewPath($galleryId, $filename);
+
+        $result = $this->images->makeVariant(
+            $absoluteOriginal,
+            $this->storage->absolute($relative),
+            $definition['width'],
+            $definition['quality'],
+            $definition['watermark'],
+            $watermarkText,
+            $format
+        );
+
+        $this->photos->insertVariant([
+            'photo_id'     => $photoId,
+            'variant_type' => $type,
+            'storage_path' => $relative,
+            'mime_type'    => $result['mime'],
+            'width'        => $result['width'],
+            'height'       => $result['height'],
+            'file_size'    => $result['bytes'],
+            'created_at'   => date('Y-m-d H:i:s'),
+        ]);
     }
 
     /**

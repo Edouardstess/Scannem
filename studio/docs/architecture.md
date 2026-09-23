@@ -27,7 +27,9 @@ Router       ──── correspondance de motif + pipeline de middlewares
     ↓
 Middleware   ──── en-têtes, CSRF, authentification, permission
     ↓
-Controller   ──── valide l'entrée, délègue, choisit la réponse
+Controller   ──── délègue et choisit la réponse
+    ↓
+FormRequest  ──── règles de validation, normalisation des valeurs
     ↓
 Service      ──── la logique métier vit ici, et seulement ici
     ↓
@@ -38,6 +40,26 @@ PDO → MySQL
 
 Un contrôleur qui contiendrait une règle métier serait une erreur : la même
 règle serait alors à réimplémenter dans la ligne de commande et dans les tests.
+
+### La couche de validation
+
+Chaque formulaire a sa classe dans `app/Validators/`. Elle déclare ses règles,
+ses libellés, les contrôles qu'une règle ne peut pas exprimer (`after()`) et la
+forme des valeurs à enregistrer (`transform()`).
+
+Trois conséquences :
+
+- **Anti-affectation de masse.** `data()` ne rend que les clés déclarées. Un
+  champ `role` glissé dans un formulaire de client n'atteint jamais le service.
+- **Une seule normalisation.** Un e-mail passe en minuscules, une date devient
+  `Y-m-d`, un champ optionnel vide devient `null` — au même endroit pour tous
+  les appelants.
+- **Un contrôleur qui ne nomme aucun FormRequest est un contrôleur qui ne
+  valide pas**, et cela se voit à la lecture.
+
+Les dates acceptent le format jour d'abord (`15/06/2026`). `<input type="date">`
+soumet du `Y-m-d`, mais il se dégrade en champ texte sur les navigateurs qui ne
+le gèrent pas, et un utilisateur français y tape le format français.
 
 ---
 
@@ -134,6 +156,7 @@ La logique métier, un service par domaine.
 | Service | Rôle |
 |---|---|
 | `GalleryService` | cycle de vie d'une galerie, émission des deux liens |
+| `PublicImageService` | images publiques : portfolio, prestations, bannière |
 | `GalleryAccessService` | **le portillon unique** de toute requête client |
 | `TokenService` | génération, vérification, révocation, réaffichage |
 | `MediaTokenService` | URLs d'image signées, sans ligne en base |
@@ -158,6 +181,18 @@ VIEW/DOWNLOAD vérifiable : il y a un endroit à lire, et un endroit à corriger
 Il retourne un `GalleryAccess` qui porte la décision **et son motif**, pour que
 le contrôleur affiche la bonne page sans rien redériver, et que l'audit
 enregistre pourquoi un accès a été refusé.
+
+### Formats d'image
+
+Chaque rendition est écrite en JPEG, et — lorsque le serveur sait le produire —
+doublée d'un WebP de mêmes dimensions. `MediaController` choisit selon
+l'en-tête `Accept` du navigateur et répond `Vary: Accept`, faute de quoi un
+cache partagé servirait du WebP à un navigateur qui ne sait pas le lire.
+
+JPEG reste la base : un hôte sans support WebP, ou une photo importée avant que
+la fonction existe, sert simplement le JPEG. En pratique le gain mesuré est de
+l'ordre de deux tiers sur les aperçus, ce qui change l'expérience d'une galerie
+de 250 images ouverte en 4G.
 
 ### Diffusion en flux
 

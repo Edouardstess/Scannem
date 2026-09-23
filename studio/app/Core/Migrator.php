@@ -151,8 +151,8 @@ final class Migrator
      * Translate a MySQL DDL statement to its SQLite equivalent.
      *
      * The migrations deliberately stick to a conservative subset (no inline
-     * KEY clauses, no ENUM, separate CREATE INDEX statements), which keeps
-     * this translation small enough to trust.
+     * KEY clauses, no ENUM, separate CREATE INDEX statements, one column per
+     * ALTER TABLE), which keeps this translation small enough to trust.
      */
     public static function toSqlite(string $statement): string
     {

@@ -24,6 +24,7 @@ use App\Controllers\Admin\MessageController;
 use App\Controllers\Admin\PhotoController;
 use App\Controllers\Admin\PortfolioAdminController;
 use App\Controllers\Admin\ServiceAdminController;
+use App\Controllers\Admin\ShareController;
 use App\Controllers\Admin\SettingsController;
 use App\Controllers\Admin\StatisticsController;
 use App\Controllers\AuthController;
@@ -148,11 +149,14 @@ $router->get('/admin/galleries/{id:\d+}/edit', [AdminGalleryController::class, '
 $router->put('/admin/galleries/{id:\d+}', [AdminGalleryController::class, 'update'], $galleryRead);
 $router->delete('/admin/galleries/{id:\d+}', [AdminGalleryController::class, 'destroy'], $galleryDelete);
 
-$router->get('/admin/galleries/{id:\d+}/share', [AdminGalleryController::class, 'share'], $galleryRead, 'admin.galleries.share');
 $router->post('/admin/galleries/{id:\d+}/status', [AdminGalleryController::class, 'changeStatus'], $galleryRead);
-$router->post('/admin/galleries/{id:\d+}/notify', [AdminGalleryController::class, 'notifyClient'], $galleryRead);
-$router->post('/admin/galleries/{id:\d+}/tokens/{type}/regenerate', [AdminGalleryController::class, 'regenerateToken'], $galleryRead);
-$router->post('/admin/galleries/{id:\d+}/tokens/{type}/revoke', [AdminGalleryController::class, 'revokeToken'], $galleryRead);
+
+// Sharing and link lifecycle: who can reach a gallery, as opposed to what it
+// contains.
+$router->get('/admin/galleries/{id:\d+}/share', [ShareController::class, 'show'], $galleryRead, 'admin.galleries.share');
+$router->post('/admin/galleries/{id:\d+}/notify', [ShareController::class, 'notifyClient'], $galleryRead);
+$router->post('/admin/galleries/{id:\d+}/tokens/{type}/regenerate', [ShareController::class, 'regenerate'], $galleryRead);
+$router->post('/admin/galleries/{id:\d+}/tokens/{type}/revoke', [ShareController::class, 'revoke'], $galleryRead);
 
 // Photos
 $photoUpload = array_merge($admin, [RequiresPhotoUploadMiddleware::class]);

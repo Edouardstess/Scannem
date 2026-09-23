@@ -176,6 +176,40 @@ if (!function_exists('format_date_long')) {
     }
 }
 
+if (!function_exists('parse_date')) {
+    /**
+     * Parse a date a French visitor might type.
+     *
+     * `<input type="date">` submits Y-m-d, which is what this normally
+     * receives. But that input degrades to a plain text field on browsers
+     * that do not support it, and a French user then types 15/06/2026 —
+     * which strtotime reads as month 15 and rejects. Accepting the day-first
+     * forms turns a silently dropped date into a stored one.
+     *
+     * @return int|false A timestamp, or false when nothing could be parsed.
+     */
+    function parse_date(string $value): int|false
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        // Day-first formats, tried before strtotime so that 06/07/2026 is
+        // read as 6 July and not as 7 June.
+        foreach (['d/m/Y', 'd-m-Y', 'd.m.Y', 'd/m/y'] as $format) {
+            $parsed = DateTime::createFromFormat($format . '|', $value);
+
+            if ($parsed !== false && DateTime::getLastErrors() === false) {
+                return $parsed->getTimestamp();
+            }
+        }
+
+        return strtotime($value);
+    }
+}
+
 if (!function_exists('str_slug')) {
     function str_slug(string $value, string $separator = '-'): string
     {

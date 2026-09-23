@@ -7,12 +7,12 @@ namespace App\Controllers\Admin;
 use App\Controllers\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Validator;
 use App\Models\AuditAction;
 use App\Repositories\ClientRepository;
 use App\Repositories\EventRepository;
 use App\Services\AuditService;
 use App\Services\ClientService;
+use App\Validators\ClientRequest;
 
 final class ClientController extends Controller
 {
@@ -53,13 +53,13 @@ final class ClientController extends Controller
     /** POST /admin/clients */
     public function store(Request $request): Response
     {
-        $validator = $this->validator($request);
+        $form = (new ClientRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/clients/create');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/clients/create');
         }
 
-        $id = $this->service->create($validator->validated());
+        $id = $this->service->create($form->data());
         $this->audit->record(AuditAction::CLIENT_CREATED, $request, null, null, ['client_id' => $id]);
         $this->flashSuccess('Client créé.');
 
@@ -96,13 +96,13 @@ final class ClientController extends Controller
         $id = (int) $parameters['id'];
         $this->orFail($this->clients->find($id), 'Client introuvable.');
 
-        $validator = $this->validator($request, $id);
+        $form = (new ClientRequest($id))->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/clients/' . $id . '/edit');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/clients/' . $id . '/edit');
         }
 
-        $this->service->update($id, $validator->validated());
+        $this->service->update($id, $form->data());
         $this->audit->record(AuditAction::CLIENT_UPDATED, $request, null, null, ['client_id' => $id]);
         $this->flashSuccess('Client mis à jour.');
 
@@ -138,33 +138,4 @@ final class ClientController extends Controller
         return $this->redirect('admin/clients');
     }
 
-    private function validator(Request $request, ?int $exceptId = null): Validator
-    {
-        $validator = Validator::make($request->all(), [
-            'first_name' => 'required|string|min:2|max:100',
-            'last_name'  => 'required|string|min:2|max:100',
-            'email'      => 'nullable|email|max:190',
-            'phone'      => 'nullable|phone',
-            'company'    => 'nullable|string|max:150',
-            'notes'      => 'nullable|string|max:5000',
-        ], [], [
-            'first_name' => 'prénom',
-            'last_name'  => 'nom',
-            'email'      => 'e-mail',
-            'phone'      => 'téléphone',
-            'company'    => 'société',
-        ]);
-
-        if ($validator->passes()) {
-            $email = trim((string) $request->input('email', ''));
-
-            // A warning, not a hard rule: families share an address, and the
-            // photographer is the one who knows whether it is a duplicate.
-            if ($email !== '' && $this->clients->emailExists($email, $exceptId)) {
-                \App\Core\Session::flash('info', 'Un autre client utilise déjà cette adresse e-mail.');
-            }
-        }
-
-        return $validator;
-    }
 }

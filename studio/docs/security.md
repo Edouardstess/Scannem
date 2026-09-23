@@ -281,6 +281,11 @@ depuis un simple lien ou un préchargement.
 Tout passe par des requêtes préparées PDO, avec `ATTR_EMULATE_PREPARES` à
 `false` pour que la préparation soit réellement faite par le serveur.
 
+Les valeurs écrites sont doublement bornées : la classe `FormRequest` ne rend
+que les champs qu'elle déclare, et le dépôt n'écrit que les colonnes de son
+`$fillable`. Un champ supplémentaire ajouté à un formulaire est écarté deux
+fois.
+
 Les identifiants (table, colonne de tri) ne viennent jamais de l'utilisateur :
 `ORDER BY` est comparé à une liste blanche déclarée par chaque dépôt, et une
 valeur inconnue retombe sur `id`.
@@ -360,7 +365,30 @@ navigateur : ils contiennent parfois les identifiants de connexion.
 
 ---
 
-## 15. Ce qui n'est pas protégé
+## 15. L'installateur web
+
+`public/install.php` est le fichier le plus dangereux du projet : il peut
+réécrire les identifiants de base de données et créer un administrateur. Trois
+garde-fous :
+
+1. Il refuse de s'exécuter si un fichier verrou existe dans le stockage privé.
+2. Il refuse de s'exécuter si la base contient déjà un compte — même si le
+   verrou a été supprimé. C'est le contrôle qui compte réellement.
+3. Le contrôle est évalué **avant** toute branche POST : aucune requête forgée
+   ne peut sauter les étapes.
+
+Il est protégé par CSRF, marqué `noindex`, ne réaffiche jamais le mot de passe
+de base de données dans le formulaire, et écrit un `.env` sûr par défaut
+(`APP_ENV=production`, `APP_DEBUG=false`, `HSTS_ENABLED=false`, `APP_KEY`
+généré aléatoirement).
+
+**Il doit malgré tout être supprimé après l'installation.** L'écran
+`/admin/settings` affiche un point rouge critique tant qu'il est présent, et
+`php bin/console.php check` sort avec le code 1.
+
+---
+
+## 16. Ce qui n'est pas protégé
 
 **La capture d'écran.** Un client qui voit une image peut la photographier. Ce
 qui est protégé, c'est le fichier source : sa résolution, ses métadonnées, sa
@@ -382,7 +410,7 @@ aux originaux. Aucune application ne peut s'en prémunir.
 
 ---
 
-## 16. En cas d'incident
+## 17. En cas d'incident
 
 **Un lien a été envoyé à la mauvaise personne**
 `/admin/galleries/{id}/share` → « Désactiver ». Le lien cesse de fonctionner

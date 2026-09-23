@@ -8,7 +8,6 @@ use App\Controllers\Controller;
 use App\Core\Config;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Validator;
 use App\Exceptions\UploadException;
 use App\Models\AuditAction;
 use App\Services\AuditService;
@@ -17,6 +16,7 @@ use App\Services\PublicImageService;
 use App\Services\SettingsService;
 use App\Services\StorageService;
 use App\Services\ZipService;
+use App\Validators\SettingsRequest;
 
 /**
  * Site settings, plus a diagnostics panel.
@@ -28,31 +28,6 @@ use App\Services\ZipService;
  */
 final class SettingsController extends Controller
 {
-    /** Text settings and their validation rules. */
-    private const TEXT_FIELDS = [
-        'studio_name'       => 'required|string|max:120',
-        'photographer_name' => 'nullable|string|max:120',
-        'tagline'           => 'nullable|string|max:190',
-        'speciality'        => 'nullable|string|max:190',
-        'hero_title'        => 'nullable|string|max:190',
-        'hero_subtitle'     => 'nullable|string|max:255',
-        'about_title'       => 'nullable|string|max:190',
-        'about_text'        => 'nullable|string|max:5000',
-        'contact_email'     => 'nullable|email|max:190',
-        'contact_phone'     => 'nullable|phone',
-        'contact_address'   => 'nullable|string|max:255',
-        'social_instagram'  => 'nullable|url|max:255',
-        'social_facebook'   => 'nullable|url|max:255',
-        'social_linkedin'   => 'nullable|url|max:255',
-        'social_pinterest'  => 'nullable|url|max:255',
-        'footer_text'       => 'nullable|string|max:500',
-        'meta_description'  => 'nullable|string|max:255',
-        'watermark_text'    => 'nullable|string|max:120',
-        'color_primary'     => 'nullable|hex',
-        'color_accent'      => 'nullable|hex',
-        'color_background'  => 'nullable|hex',
-    ];
-
     public function __construct(
         private SettingsService $settings = new SettingsService(),
         private PublicImageService $images = new PublicImageService(),
@@ -76,33 +51,16 @@ final class SettingsController extends Controller
     /** POST /admin/settings */
     public function update(Request $request): Response
     {
-        $validator = Validator::make($request->all(), self::TEXT_FIELDS, [], [
-            'studio_name'      => 'nom du studio',
-            'contact_email'    => 'e-mail de contact',
-            'contact_phone'    => 'téléphone',
-            'color_primary'    => 'couleur principale',
-            'color_accent'     => 'couleur d\'accent',
-            'color_background' => 'couleur de fond',
-        ]);
+        $form = (new SettingsRequest())->validate($request);
 
-        if ($validator->fails()) {
-            return $this->redirectWithErrors($request, $validator->errors(), 'admin/settings');
+        if ($form->fails()) {
+            return $this->redirectWithErrors($request, $form->errors(), 'admin/settings');
         }
 
-        $values = [];
+        $this->settings->setMany($form->data(), 'site');
 
-        foreach (array_keys(self::TEXT_FIELDS) as $key) {
-            $value = $request->string($key);
-            $values[$key] = str_starts_with($key, 'color_') ? $this->normaliseColour($value) : $value;
-        }
-
-        $values['booking_enabled'] = $request->bool('booking_enabled');
-        $values['client_area_enabled'] = $request->bool('client_area_enabled');
-
-        $this->settings->setMany($values, 'site');
-
-        foreach (['hero_image' => 'site', 'about_image' => 'site', 'logo_path' => 'site'] as $field => $group) {
-            $this->handleImageUpload($request, $field, $group);
+        foreach (SettingsRequest::IMAGE_FIELDS as $field) {
+            $this->handleImageUpload($request, $field, 'site');
         }
 
         $this->audit->record(AuditAction::SETTINGS_UPDATED, $request);
@@ -160,16 +118,6 @@ final class SettingsController extends Controller
         }
     }
 
-    private function normaliseColour(string $value): string
-    {
-        $value = trim($value);
-
-        if ($value === '') {
-            return '';
-        }
-
-        return str_starts_with($value, '#') ? $value : '#' . $value;
-    }
 
     /**
      * Environment checks shown on the settings screen.
@@ -184,7 +132,17 @@ final class SettingsController extends Controller
         $environment = (string) Config::get('app.env', 'production');
         $usage = $this->storage->usage();
 
+        $installer = dirname(__DIR__, 3) . '/public/install.php';
+
         return [
+            [
+                'label'    => "Installateur supprimé",
+                'ok'       => !is_file($installer),
+                'detail'   => is_file($installer)
+                    ? 'CRITIQUE : public/install.php est toujours présent. Supprimez-le maintenant.'
+                    : 'public/install.php a bien été supprimé.',
+                'critical' => true,
+            ],
             [
                 'label'    => 'Stockage privé hors du dossier public',
                 'ok'       => !$storageExposed,
