@@ -30,6 +30,8 @@ abstract class Repository
 
     protected function run(string $sql, array $bindings = []): PDOStatement
     {
+        [$sql, $bindings] = Database::expandPlaceholders($sql, $bindings);
+
         $statement = $this->pdo()->prepare($sql);
 
         foreach ($bindings as $key => $value) {

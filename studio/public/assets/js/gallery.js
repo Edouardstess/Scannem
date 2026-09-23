@@ -8,12 +8,28 @@
 (function () {
     'use strict';
 
-    var config = window.GALLERY_CONFIG || {};
+    // Read from a JSON data block: an inline script would be refused by the
+    // Content-Security-Policy (script-src 'self') and leave the page inert.
+    var config = readConfig();
     var grid = document.querySelector('[data-photo-grid]');
     var root = document.querySelector('[data-lightbox-root]');
 
     if (!grid) {
         return;
+    }
+
+    function readConfig() {
+        var node = document.getElementById('gallery-config');
+
+        if (!node) {
+            return {};
+        }
+
+        try {
+            return JSON.parse(node.textContent) || {};
+        } catch (error) {
+            return {};
+        }
     }
 
     /* ------------------------------------------------------------------ */

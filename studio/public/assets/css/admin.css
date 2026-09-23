@@ -29,6 +29,9 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+/* `hidden` must win over any component's display rule (flex, grid...). */
+[hidden] { display: none !important; }
+
 
 body.admin {
     margin: 0; background: var(--admin-bg); color: var(--admin-text);

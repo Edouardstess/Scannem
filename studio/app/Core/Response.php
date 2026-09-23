@@ -129,6 +129,10 @@ final class Response
             }
         }
 
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD') {
+            return;
+        }
+
         if ($this->streamer !== null) {
             ($this->streamer)();
 

@@ -101,7 +101,9 @@ final class Router
      */
     public function dispatch(Request $request): Response
     {
-        $method = $request->method();
+        // HEAD is answered by the GET route (uptime monitors, link checkers);
+        // Response::send() then omits the body.
+        $method = $request->method() === 'HEAD' ? 'GET' : $request->method();
         $path = $request->path();
 
         foreach ($this->routes[$method] ?? [] as $route) {

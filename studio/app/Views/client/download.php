@@ -70,7 +70,12 @@ $clientName = trim((string) $gallery['first_name'] . ' ' . (string) $gallery['la
                 <div class="download-progress__bar" data-progress-bar></div>
             </div>
         </div>
+    </div>
+</section>
 
+<section class="gallery-body">
+    <div class="wrap">
+        <?php /* Inside the grid's section so position: sticky follows the photos. */ ?>
         <div class="download-selection" data-selection-bar hidden>
             <span><strong data-selected-count>0</strong> photo(s) sélectionnée(s)</span>
             <div class="download-selection__actions">
@@ -85,11 +90,7 @@ $clientName = trim((string) $gallery['first_name'] . ' ' . (string) $gallery['la
                 </button>
             </div>
         </div>
-    </div>
-</section>
 
-<section class="gallery-body">
-    <div class="wrap">
         <?php if ($photos === []): ?>
             <p class="empty">Aucune photographie dans cette galerie pour le moment.</p>
         <?php else: ?>
@@ -119,8 +120,8 @@ View::endSection();
 
 View::startSection('scripts');
 ?>
-<script>
-window.GALLERY_CONFIG = <?= ejs([
+<?php /* A JSON data block is never executed, so the CSP (script-src 'self') allows it. */ ?>
+<script type="application/json" id="gallery-config"><?= ejs([
     'photosEndpoint'  => $photosEndpoint,
     'archiveEndpoint' => $zipAvailable ? $archiveEndpoint : null,
     'selectEndpoint'  => null,
@@ -132,8 +133,7 @@ window.GALLERY_CONFIG = <?= ejs([
     'selectable'      => $zipAvailable,
     'total'           => (int) $pagination['total'],
     'downloadable'    => (int) $downloadableCount,
-]) ?>;
-</script>
+]) ?></script>
 <script src="<?= e(asset('js/gallery.js')) ?>" defer></script>
 <?php
 View::endSection();

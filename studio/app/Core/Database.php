@@ -101,6 +101,71 @@ final class Database
         return (string) self::connection()->getAttribute(PDO::ATTR_DRIVER_NAME);
     }
 
+    /**
+     * Give every repeated named placeholder its own name.
+     *
+     * With native prepares (emulation is off) MySQL rejects a named
+     * placeholder used twice in one statement ("Invalid parameter number"),
+     * while SQLite accepts it. Rewriting `:search ... :search` into
+     * `:search ... :search__2` lets the same SQL run on both drivers.
+     * Quoted literals and `::` casts are left untouched.
+     *
+     * @param  array<int|string, mixed> $bindings
+     * @return array{0: string, 1: array<int|string, mixed>}
+     */
+    public static function expandPlaceholders(string $sql, array $bindings): array
+    {
+        if (!str_contains($sql, ':')) {
+            return [$sql, $bindings];
+        }
+
+        $parts = preg_split(
+            '/(\'(?:[^\'\\\\]|\\\\.|\'\')*\'|"(?:[^"\\\\]|\\\\.)*"|`[^`]*`)/s',
+            $sql,
+            -1,
+            PREG_SPLIT_DELIM_CAPTURE
+        );
+
+        if ($parts === false) {
+            return [$sql, $bindings];
+        }
+
+        $seen = [];
+
+        foreach ($parts as $index => $part) {
+            // Odd indexes are the captured quoted literals.
+            if ($index % 2 === 1) {
+                continue;
+            }
+
+            $parts[$index] = (string) preg_replace_callback(
+                '/(?<![:\w]):([A-Za-z_]\w*)/',
+                static function (array $match) use (&$seen, &$bindings): string {
+                    $name = $match[1];
+                    $seen[$name] = ($seen[$name] ?? 0) + 1;
+
+                    if ($seen[$name] === 1) {
+                        return $match[0];
+                    }
+
+                    $alias = $name . '__' . $seen[$name];
+
+                    foreach ([$name, ':' . $name] as $key) {
+                        if (array_key_exists($key, $bindings)) {
+                            $bindings[$alias] = $bindings[$key];
+                            break;
+                        }
+                    }
+
+                    return ':' . $alias;
+                },
+                $part
+            );
+        }
+
+        return [implode('', $parts), $bindings];
+    }
+
     /** Used by the test bootstrap to swap in an isolated connection. */
     public static function swap(?PDO $pdo): void
     {

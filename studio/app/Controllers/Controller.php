@@ -36,19 +36,12 @@ abstract class Controller
     /** Redirect back to the referring page, falling back to a known path. */
     protected function back(Request $request, string $fallback = '/'): Response
     {
-        $referer = $request->referer();
-        $host = (string) (parse_url((string) config('app.url'), PHP_URL_HOST) ?: '');
-        $refererHost = $referer === '' ? '' : (string) (parse_url($referer, PHP_URL_HOST) ?: '');
+        // Only ever same-site: an open redirect turns this application into
+        // a phishing springboard.
+        $referer = $request->sameSiteReferer();
 
-        // Never redirect to a host we do not control: an open redirect turns
-        // this application into a phishing springboard.
-        if ($referer !== '' && ($refererHost === '' || $refererHost === $host)) {
-            return Response::redirect($referer);
-        }
-
-        return $this->redirect($fallback);
+        return $referer !== null ? Response::redirect($referer) : $this->redirect($fallback);
     }
-
 
     /**
      * Re-render a form after a validation failure.

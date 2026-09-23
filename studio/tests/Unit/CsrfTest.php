@@ -66,6 +66,38 @@ final class CsrfTest extends TestCase
         $this->assertSame(303, $response->status());
     }
 
+    public function testRefusalSendsTheVisitorBackToTheFormNotToThePostUrl(): void
+    {
+        Csrf::token();
+        $middleware = new CsrfMiddleware();
+
+        // /gallery/{token}/select only exists as POST: redirecting there would
+        // show an error page instead of the gallery.
+        $request = new Request('POST', '/gallery/abc/select', [], [], [
+            'HTTP_HOST'    => 'studio.test',
+            'HTTP_REFERER' => 'http://studio.test/gallery/abc',
+        ], [], []);
+
+        $response = $middleware->handle($request, []);
+
+        $this->assertSame('http://studio.test/gallery/abc', $response?->headers()['location'] ?? null);
+    }
+
+    public function testRefusalNeverRedirectsToAnotherSite(): void
+    {
+        Csrf::token();
+        $middleware = new CsrfMiddleware();
+
+        $request = new Request('POST', '/contact', [], [], [
+            'HTTP_HOST'    => 'studio.test',
+            'HTTP_REFERER' => 'https://phishing.example/fake-login',
+        ], [], []);
+
+        $location = (string) ($middleware->handle($request, [])?->headers()['location'] ?? '');
+
+        $this->assertFalse(str_contains($location, 'phishing.example'), 'A foreign Referer must never become a redirect target.');
+    }
+
     public function testMiddlewareRejectsAWrongToken(): void
     {
         Csrf::token();

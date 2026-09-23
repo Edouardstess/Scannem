@@ -105,8 +105,8 @@ View::endSection();
 
 View::startSection('scripts');
 ?>
-<script>
-window.GALLERY_CONFIG = <?= ejs([
+<?php /* A JSON data block is never executed, so the CSP (script-src 'self') allows it. */ ?>
+<script type="application/json" id="gallery-config"><?= ejs([
     'photosEndpoint' => $photosEndpoint,
     'selectEndpoint' => $canSelect ? $selectEndpoint : null,
     'csrfToken'      => csrf_token(),
@@ -115,8 +115,7 @@ window.GALLERY_CONFIG = <?= ejs([
     'canDownload'    => $canDownload,
     'canSelect'      => $canSelect,
     'total'          => (int) $pagination['total'],
-]) ?>;
-</script>
+]) ?></script>
 <script src="<?= e(asset('js/gallery.js')) ?>" defer></script>
 <?php
 View::endSection();

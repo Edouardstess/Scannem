@@ -40,6 +40,15 @@ final class RoutingTest extends TestCase
         });
     }
 
+    public function testHeadIsAnsweredByTheGetRoute(): void
+    {
+        // Uptime monitors and link checkers send HEAD; a 405 reads as "site down".
+        $router = new Router();
+        $router->get('/', static fn () => \App\Core\Response::text('home'));
+
+        $this->assertSame(200, $router->dispatch($this->request('HEAD', '/'))->status());
+    }
+
     public function testUnknownPathsAre404AndWrongVerbsAre405(): void
     {
         $router = new Router();

@@ -43,6 +43,9 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+/* `hidden` must win over any component's display rule (flex, grid...). */
+[hidden] { display: none !important; }
+
 
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 

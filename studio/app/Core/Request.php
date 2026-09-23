@@ -345,6 +345,28 @@ final class Request
         return (string) ($this->server['HTTP_REFERER'] ?? '');
     }
 
+    /**
+     * The referring URL when it points back at this site, null otherwise.
+     *
+     * Compared with the host actually serving the request (APP_URL may be
+     * stale or absent), so redirecting to it can never become an open
+     * redirect towards another domain.
+     */
+    public function sameSiteReferer(): ?string
+    {
+        $referer = $this->referer();
+
+        if ($referer === '' || preg_match('#^https?://#i', $referer) !== 1) {
+            return null;
+        }
+
+        $host = strtolower((string) parse_url($referer, PHP_URL_HOST));
+        $port = parse_url($referer, PHP_URL_PORT);
+        $origin = $host . ($port !== null ? ':' . $port : '');
+
+        return $origin === strtolower($this->host()) ? $referer : null;
+    }
+
     public function rawBody(): string
     {
         return $this->rawBody;

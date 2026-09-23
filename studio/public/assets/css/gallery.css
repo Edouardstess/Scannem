@@ -63,14 +63,16 @@
 
 .gallery-body { padding-bottom: var(--space-5); }
 
+/* Masonry through CSS columns: every photo keeps its own proportions, so a
+   portrait never stretches a row and leaves blank space under landscapes. */
 .photo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
-    gap: var(--space-2);
+    columns: 4 260px;
+    column-gap: var(--space-2);
 }
 
 .photo {
-    position: relative; margin: 0; overflow: hidden;
+    position: relative; margin: 0 0 var(--space-2); overflow: hidden;
+    break-inside: avoid; page-break-inside: avoid;
     background: var(--color-surface-alt); border-radius: var(--radius);
 }
 
@@ -79,7 +81,7 @@
     background: none; border: 0; cursor: zoom-in;
 }
 .photo__image {
-    width: 100%; aspect-ratio: var(--ratio, 3 / 2); object-fit: cover;
+    display: block; width: 100%; height: auto; aspect-ratio: var(--ratio, 3 / 2); object-fit: cover;
     transition: transform 500ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity var(--transition);
 }
 .photo__button:hover .photo__image { transform: scale(1.035); }
@@ -140,9 +142,11 @@
 }
 
 .download-selection {
-    position: sticky; bottom: 0; z-index: 60;
+    /* Pinned under the sticky header so the counter and actions stay in view
+       while the visitor scrolls through the photos ticking boxes. */
+    position: sticky; top: calc(var(--client-header-height, 68px) + 8px); z-index: 60;
     display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2);
-    margin-top: var(--space-3); padding: var(--space-2);
+    margin: 0 0 var(--space-2); padding: var(--space-2);
     background: var(--color-primary); color: #fff; border-radius: var(--radius);
 }
 .download-selection__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }

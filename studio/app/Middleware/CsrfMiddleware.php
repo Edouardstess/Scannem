@@ -44,6 +44,8 @@ final class CsrfMiddleware implements MiddlewareInterface
 
         Session::flash('error', 'Session expirée. Rechargez la page et réessayez.');
 
-        return Response::redirect(url(ltrim($request->path(), '/')), 303);
+        // Back to the page holding the form: the POST URL itself usually has
+        // no GET route and would land the visitor on an error page.
+        return Response::redirect($request->sameSiteReferer() ?? url('/'), 303);
     }
 }
