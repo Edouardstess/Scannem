@@ -52,7 +52,7 @@ $isDatabase = ($reason ?? '') === 'database';
 <body>
 
 <main class="card">
-    <p class="eyebrow">Studio</p>
+    <p class="eyebrow">L&#039;ENFANT VISUAL</p>
 
     <?php if ($isDatabase): ?>
         <h1>La base de données ne répond pas</h1>

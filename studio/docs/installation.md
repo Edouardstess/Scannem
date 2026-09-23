@@ -272,7 +272,7 @@ MAIL_USERNAME=…
 MAIL_PASSWORD=…
 MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS=contact@photographe.com
-MAIL_FROM_NAME="Atelier Lumière"
+MAIL_FROM_NAME="L'ENFANT VISUAL"
 ```
 
 `MAIL_DRIVER=mail` utilise la fonction `mail()` de PHP, souvent suffisante sur

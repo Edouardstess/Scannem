@@ -13,7 +13,7 @@
 $settings = $settings ?? \App\Services\SettingsService::DEFAULTS;
 
 $currentPath = $currentPath ?? '/';
-$studioName = (string) ($settings['studio_name'] ?? 'Studio');
+$studioName = (string) ($settings['studio_name'] ?? 'L\'ENFANT VISUAL');
 $photographer = (string) ($settings['photographer_name'] ?? $studioName);
 
 $person = [

@@ -14,6 +14,6 @@ return [
     'password'     => Config::env('MAIL_PASSWORD', ''),
     'encryption'   => Config::env('MAIL_ENCRYPTION', 'tls'),
     'from_address' => Config::env('MAIL_FROM_ADDRESS', 'no-reply@example.com'),
-    'from_name'    => Config::env('MAIL_FROM_NAME', 'Studio'),
+    'from_name'    => Config::env('MAIL_FROM_NAME', 'L\'ENFANT VISUAL'),
     'timeout'      => Config::envInt('MAIL_TIMEOUT', 15),
 ];

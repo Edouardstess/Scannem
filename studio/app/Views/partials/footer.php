@@ -5,7 +5,7 @@
 // error pages renderable when a failure happens before that.
 $settings = $settings ?? \App\Services\SettingsService::DEFAULTS;
 
-$studioName = (string) ($settings['studio_name'] ?? 'Studio');
+$studioName = (string) ($settings['studio_name'] ?? 'L\'ENFANT VISUAL');
 $email = (string) ($settings['contact_email'] ?? '');
 $phone = (string) ($settings['contact_phone'] ?? '');
 $address = (string) ($settings['contact_address'] ?? '');

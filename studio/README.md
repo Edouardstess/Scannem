@@ -1,4 +1,4 @@
-# Studio — site vitrine et livraison privée de photographies
+# L'ENFANT VISUAL — site vitrine et livraison privée de photographies
 
 Application web pour photographe professionnel : un site vitrine, un portfolio,
 et surtout un système de livraison de photographies aux clients où **les

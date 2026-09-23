@@ -9,7 +9,7 @@
 $settings = $settings ?? \App\Services\SettingsService::DEFAULTS;
 
 $currentPath = $currentPath ?? '/';
-$studioName = (string) ($settings['studio_name'] ?? 'Studio');
+$studioName = (string) ($settings['studio_name'] ?? 'L\'ENFANT VISUAL');
 $logo = (string) ($settings['logo_path'] ?? '');
 
 $links = [

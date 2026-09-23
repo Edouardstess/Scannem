@@ -17,7 +17,7 @@ use App\Core\View;
 // error pages renderable when a failure happens before that.
 $settings = $settings ?? \App\Services\SettingsService::DEFAULTS;
 
-$studioName = (string) ($settings['studio_name'] ?? 'Studio');
+$studioName = (string) ($settings['studio_name'] ?? 'L\'ENFANT VISUAL');
 $logo = (string) ($settings['logo_path'] ?? '');
 ?>
 <!doctype html>

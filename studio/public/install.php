@@ -147,7 +147,7 @@ function renderEnv(array $database, string $appUrl, string $appKey): string
     return implode("\n", [
         '# Généré par public/install.php le ' . date('Y-m-d H:i:s'),
         '',
-        'APP_NAME=' . $quote('Studio'),
+        'APP_NAME=' . $quote("L'ENFANT VISUAL"),
         'APP_ENV=production',
         'APP_DEBUG=false',
         'APP_URL=' . $appUrl,
@@ -192,7 +192,7 @@ function renderEnv(array $database, string $appUrl, string $appKey): string
         'MAIL_PASSWORD=',
         'MAIL_ENCRYPTION=tls',
         'MAIL_FROM_ADDRESS=no-reply@example.com',
-        'MAIL_FROM_NAME=' . $quote('Studio'),
+        'MAIL_FROM_NAME=' . $quote("L'ENFANT VISUAL"),
         '',
     ]);
 }
@@ -352,7 +352,7 @@ $suggestedUrl = (($_SERVER['HTTPS'] ?? 'off') !== 'off' ? 'https://' : 'http://'
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Installation — Studio</title>
+<title>Installation — L&#039;ENFANT VISUAL</title>
 <link rel="stylesheet" href="assets/css/admin.css">
 <style>
     body.admin { display: grid; place-items: start center; padding: 2.5rem 1rem; background: #f6f5f2; }

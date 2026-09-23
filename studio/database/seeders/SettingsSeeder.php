@@ -26,7 +26,7 @@ final class SettingsSeeder
 
         $defaults = [
             'site' => [
-                'studio_name'       => 'Atelier Lumière',
+                'studio_name'       => 'L\'ENFANT VISUAL',
                 'photographer_name' => 'Camille Rivière',
                 'tagline'           => 'Capturer les moments qui méritent de rester.',
                 'speciality'        => 'Mariage · Portrait · Éditorial',

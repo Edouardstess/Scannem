@@ -14,7 +14,7 @@ use App\Core\View;
 $settings = $settings ?? \App\Services\SettingsService::DEFAULTS;
 $currentPath = $currentPath ?? '/';
 
-$studioName = (string) ($settings['studio_name'] ?? 'Studio');
+$studioName = (string) ($settings['studio_name'] ?? 'L\'ENFANT VISUAL');
 $pageTitle = isset($title) && $title !== null && $title !== ''
     ? $title . ' — ' . $studioName
     : $studioName . ' — ' . (string) ($settings['tagline'] ?? '');

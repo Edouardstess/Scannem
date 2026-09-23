@@ -19,7 +19,7 @@ final class SettingsService
     private static ?array $cache = null;
 
     public const DEFAULTS = [
-        'studio_name'        => 'Studio',
+        'studio_name'        => 'L\'ENFANT VISUAL',
         'photographer_name'  => 'Photographe',
         'tagline'            => 'Capturer les moments qui méritent de rester.',
         'speciality'         => 'Mariage · Portrait · Éditorial',

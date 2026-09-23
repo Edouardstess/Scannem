@@ -291,7 +291,7 @@ final class MailService
     /** @param array<string, mixed> $gallery */
     public function notifyGalleryReady(string $recipient, array $gallery, string $viewUrl): bool
     {
-        $studio = (string) $this->settings->get('studio_name', 'Studio');
+        $studio = (string) $this->settings->get('studio_name', 'L\'ENFANT VISUAL');
         $title = (string) $gallery['title'];
 
         $body = $this->wrap(
@@ -310,7 +310,7 @@ final class MailService
     /** @param array<string, mixed> $gallery */
     public function notifyDownloadAvailable(string $recipient, array $gallery, string $downloadUrl): bool
     {
-        $studio = (string) $this->settings->get('studio_name', 'Studio');
+        $studio = (string) $this->settings->get('studio_name', 'L\'ENFANT VISUAL');
 
         $body = $this->wrap(
             'Vos photos sont téléchargeables',
@@ -327,7 +327,7 @@ final class MailService
     /** @param array<string, mixed> $message */
     public function notifyNewMessage(string $recipient, array $message): bool
     {
-        $studio = (string) $this->settings->get('studio_name', 'Studio');
+        $studio = (string) $this->settings->get('studio_name', 'L\'ENFANT VISUAL');
 
         $body = $this->wrap(
             'Nouveau message',

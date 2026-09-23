@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Core\Config;
 
 return [
-    'name'      => Config::env('APP_NAME', 'Studio'),
+    'name'      => Config::env('APP_NAME', 'L\'ENFANT VISUAL'),
     'env'       => Config::env('APP_ENV', 'production'),
     'debug'     => Config::envBool('APP_DEBUG', false),
     'url'       => rtrim((string) Config::env('APP_URL', 'http://localhost:8000'), '/'),

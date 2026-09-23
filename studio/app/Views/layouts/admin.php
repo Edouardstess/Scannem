@@ -17,7 +17,7 @@ use App\Models\Role;
 $settings = $settings ?? \App\Services\SettingsService::DEFAULTS;
 $currentPath = $currentPath ?? '/';
 
-$studioName = (string) ($settings['studio_name'] ?? 'Studio');
+$studioName = (string) ($settings['studio_name'] ?? 'L\'ENFANT VISUAL');
 
 $sections = [
     ['path' => '/admin',            'label' => 'Tableau de bord', 'permission' => null,               'exact' => true],
