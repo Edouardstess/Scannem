@@ -81,6 +81,81 @@ final class PortfolioAdminController extends Controller
         return $this->redirect('admin/portfolio');
     }
 
+    /**
+     * POST /admin/portfolio/bulk — one photo per request, from the uploader.
+     *
+     * Every photo gets the category, status and "featured" chosen above the
+     * drop zone; its title comes from the file name and can be edited later.
+     */
+    public function bulkStore(Request $request): Response
+    {
+        $file = $request->file('photo');
+
+        if ($file === null) {
+            return $this->json(['error' => 'Aucun fichier reçu.'], 422);
+        }
+
+        $categoryId = $request->int('category_id');
+        $category = $categoryId > 0 ? $this->portfolio->findCategory($categoryId) : null;
+        $status = $request->string('status') === 'draft' ? 'draft' : 'published';
+        $name = (string) ($file['name'] ?? 'photo');
+
+        try {
+            $stored = $this->images->store($file, 'portfolio');
+        } catch (UploadException $e) {
+            return $this->json(['uploaded' => [], 'failed' => [['name' => $name, 'error' => $e->getMessage()]]], 422);
+        } catch (\Throwable $e) {
+            // Image processing refusals (too many pixels for the memory
+            // available, unreadable file) carry a message worth showing.
+            return $this->json(['uploaded' => [], 'failed' => [['name' => $name, 'error' => $e->getMessage()]]], 422);
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $id = $this->portfolio->insert([
+            'title'          => self::titleFromFilename($name, $category !== null ? (string) $category['name'] : null),
+            'description'    => null,
+            'category_id'    => $category !== null ? (int) $category['id'] : null,
+            'featured'       => $request->bool('featured') ? 1 : 0,
+            'status'         => $status,
+            'image_path'     => $stored['path'],
+            'thumbnail_path' => $stored['thumbnail'],
+            'width'          => $stored['width'],
+            'height'         => $stored['height'],
+            'sort_order'     => $this->portfolio->nextSortOrder(),
+            'created_at'     => $now,
+            'updated_at'     => $now,
+        ]);
+
+        $this->audit->record(AuditAction::PORTFOLIO_UPDATED, $request, null, null, ['item_id' => $id, 'bulk' => true]);
+
+        return $this->json([
+            'uploaded' => [[
+                'id'        => $id,
+                'name'      => $name,
+                'thumb_url' => url($stored['thumbnail']),
+            ]],
+            'failed'   => [],
+            'total'    => count($this->portfolio->allItems()),
+        ], 201);
+    }
+
+    /**
+     * A readable title from a file name: "coucher-de-soleil_jacmel.jpg" gives
+     * "Coucher de soleil jacmel". Camera names (IMG_1234, DSC01234…) say
+     * nothing to a visitor, so they fall back to the category name.
+     */
+    public static function titleFromFilename(string $filename, ?string $fallback = null): string
+    {
+        $base = trim((string) preg_replace('/[\s_\-.]+/u', ' ', pathinfo($filename, PATHINFO_FILENAME)));
+        $cameraName = preg_match('/^(img|dsc[nf]?|dji|pxl|mvimg|photo|image|_?mg|p|wp|screenshot)?[\s\d]*$/i', $base) === 1;
+
+        if ($base === '' || $cameraName) {
+            return $fallback !== null && trim($fallback) !== '' ? trim($fallback) : 'Photographie';
+        }
+
+        return mb_strtoupper(mb_substr($base, 0, 1)) . mb_substr(mb_substr($base, 1), 0, 189);
+    }
+
     /** GET /admin/portfolio/{id}/edit */
     public function edit(Request $request, array $parameters): Response
     {

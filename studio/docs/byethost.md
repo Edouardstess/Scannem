@@ -94,6 +94,14 @@ dans Google Maps ». Pour placer l'épingle exactement, collez le code de
 Google Maps : **Partager → Intégrer une carte → Copier le code HTML**.
 Aucune clé d'API Google n'est nécessaire.
 
+### Montrer votre travail à tous les visiteurs
+
+**Admin → Portfolio** : choisissez une catégorie, cochez « Mettre en vedette »
+si les photos doivent apparaître sur l'accueil, puis glissez plusieurs photos
+à la fois dans la zone d'import. Elles sont visibles tout de suite sur la page
+Portfolio du site. Les galeries privées, elles, restent réservées à chaque
+client.
+
 ### Dans le fichier `.env` (à modifier avec FileZilla)
 
 Une fois `https://` fonctionnel sur votre domaine :

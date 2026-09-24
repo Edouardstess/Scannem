@@ -228,6 +228,13 @@
             if (running || pending.length === 0) {
                 if (!running && pending.length === 0) {
                     render();
+
+                    // Show the new photos in the list below, unless a failure
+                    // is waiting to be read or retried.
+                    if (container.hasAttribute('data-reload-when-done') && completed > 0 && failed === 0) {
+                        status.textContent = completed + ' photo(s) ajoutée(s). Actualisation…';
+                        window.setTimeout(function () { window.location.reload(); }, 900);
+                    }
                 }
 
                 return;
@@ -241,6 +248,16 @@
             var body = new FormData();
             body.append('photo', item.file);
             body.append('_token', token);
+
+            // Options chosen next to the drop zone (portfolio: category,
+            // status, featured) travel with every photo.
+            Array.prototype.forEach.call(container.querySelectorAll('[data-upload-field]'), function (field) {
+                if ((field.type === 'checkbox' || field.type === 'radio') && !field.checked) {
+                    return;
+                }
+
+                body.append(field.name, field.value);
+            });
 
             fetch(endpoint, {
                 method: 'POST',

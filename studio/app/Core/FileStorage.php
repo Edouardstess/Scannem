@@ -56,7 +56,8 @@ final class FileStorage
                 "# Private storage. Never served directly: PHP delivers these files after permission checks.\n"
                 . "<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n"
                 . "<IfModule !mod_authz_core.c>\n    Order allow,deny\n    Deny from all\n</IfModule>\n"
-                . "php_flag engine off\n"
+                . "<IfModule mod_php.c>\n    php_flag engine off\n</IfModule>\n"
+                . "<IfModule mod_php7.c>\n    php_flag engine off\n</IfModule>\n"
             );
         }
 

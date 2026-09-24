@@ -503,3 +503,11 @@ a.tile:hover { border-color: var(--color-accent); }
 /* Location map preview in the settings form. */
 .map-preview { margin-top: 1rem; }
 .map-preview__frame { display: block; width: 100%; max-width: 640px; aspect-ratio: 16 / 9; border: 1px solid var(--color-border, #e5e2dc); border-radius: 6px; }
+
+/* Portfolio uploader: options applied to every photo of the batch. */
+.uploader__options {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem 1.5rem; align-items: end; margin-bottom: 1rem;
+}
+.uploader__options .field { margin: 0; }
+.uploader__switch { grid-column: 1 / -1; }

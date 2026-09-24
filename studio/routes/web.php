@@ -176,6 +176,7 @@ $portfolioGuard = array_merge($admin, [RequiresPortfolioManageMiddleware::class]
 $router->get('/admin/portfolio', [PortfolioAdminController::class, 'index'], $portfolioGuard, 'admin.portfolio');
 $router->get('/admin/portfolio/create', [PortfolioAdminController::class, 'create'], $portfolioGuard);
 $router->post('/admin/portfolio', [PortfolioAdminController::class, 'store'], $portfolioGuard);
+$router->post('/admin/portfolio/bulk', [PortfolioAdminController::class, 'bulkStore'], $portfolioGuard);
 $router->get('/admin/portfolio/categories', [PortfolioAdminController::class, 'categories'], $portfolioGuard, 'admin.portfolio.categories');
 $router->post('/admin/portfolio/categories', [PortfolioAdminController::class, 'storeCategory'], $portfolioGuard);
 $router->put('/admin/portfolio/categories/{id:\d+}', [PortfolioAdminController::class, 'updateCategory'], $portfolioGuard);

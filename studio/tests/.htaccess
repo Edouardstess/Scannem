@@ -6,4 +6,11 @@
     Order allow,deny
     Deny from all
 </IfModule>
-php_flag engine off
+# Only understood when PHP runs as an Apache module; elsewhere (PHP-FPM,
+# CGI, most shared hosts) an unguarded php_flag is a 500 error.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
