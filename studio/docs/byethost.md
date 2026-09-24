@@ -169,6 +169,23 @@ fonctionne sans modification sur n'importe quel hébergement PHP 8.3 + MySQL.
 | Page sans mise en forme | fichiers de `public/assets/` incomplets | renvoyer le dossier `public/assets/` |
 | Photo refusée « trop lourde » | limite de 10 Mo | exporter la photo plus légère (voir plus haut) |
 | « Notifier le client » échoue | e-mails bloqués | copier les liens depuis « Partager » |
+| « Trop de tentatives » / mot de passe oublié | protection anti-intrusion | attendre la fin du délai, ou réinitialiser (voir ci-dessous) |
+
+### Mot de passe administrateur oublié
+
+Avec FileZilla, créez dans `htdocs/storage/private/` un fichier texte nommé
+`reset-password.txt` contenant :
+
+```
+email=votre@adresse.com
+password=VotreNouveauMotDePasse
+```
+
+Rechargez la page de connexion : le mot de passe est changé (10 caractères
+minimum), le blocage « Trop de tentatives » est levé et le fichier est
+supprimé automatiquement. Ce dossier n'est jamais accessible depuis le web.
+
+Avec un terminal (XAMPP) : `php bin/console.php user:password votre@adresse.com`.
 
 Le journal des erreurs de l'application se trouve dans `htdocs/storage/logs/`.
 Téléchargez-le avec FileZilla pour le consulter.

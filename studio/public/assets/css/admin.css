@@ -511,3 +511,13 @@ a.tile:hover { border-color: var(--color-accent); }
 }
 .uploader__options .field { margin: 0; }
 .uploader__switch { grid-column: 1 / -1; }
+
+/* Login: forgotten password instructions. */
+.auth__help { margin-top: 1.25rem; font-size: 0.85rem; color: var(--color-muted, #6e6960); }
+.auth__help summary { cursor: pointer; text-align: center; color: inherit; }
+.auth__help p { margin: 0.6rem 0; line-height: 1.5; }
+.auth__help code { font-size: 0.8rem; }
+.auth__help pre {
+    margin: 0.5rem 0; padding: 0.6rem 0.75rem; overflow-x: auto;
+    background: #f4f1ec; border-radius: 4px; font-size: 0.78rem; color: #1a1a1a;
+}

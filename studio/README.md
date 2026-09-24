@@ -182,7 +182,7 @@ php tests/run.php              # tout
 php tests/run.php TokenTest    # une classe
 ```
 
-212 tests, 547 assertions, aucune dépendance externe. Les tests critiques
+216 tests, 562 assertions, aucune dépendance externe. Les tests critiques
 vérifient notamment :
 
 | Ce qui est vérifié | Où |
@@ -206,6 +206,7 @@ vérifient notamment :
 | Un envoi trop lourd est expliqué, jamais pris pour une session expirée | `EnvironmentTest` |
 | La carte n'accepte que l'intégration officielle de Google Maps | `MapServiceTest` |
 | Import de plusieurs photos publiques dans le portfolio | `PortfolioBulkTest` |
+| Mot de passe oublié : réinitialisation par fichier FTP, fichier détruit | `PasswordRecoveryTest` |
 
 Les tests automatisés tournent sur SQLite. L'application a en plus été
 validée de bout en bout sur **Apache 2.4.58 (mod_rewrite, installation en

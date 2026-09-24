@@ -10,6 +10,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Models\AuditAction;
 use App\Services\AuditService;
+use App\Services\PasswordRecoveryService;
 use App\Services\RateLimiter;
 use App\Validators\LoginRequest;
 use App\Validators\PasswordChangeRequest;
@@ -28,6 +29,16 @@ final class AuthController extends Controller
     /** GET /admin/login */
     public function showLogin(Request $request): Response
     {
+        // A reset file dropped by FTP (see PasswordRecoveryService) is applied
+        // here, then the page reloads to show the outcome.
+        $recovery = (new PasswordRecoveryService())->apply($request);
+
+        if ($recovery !== null) {
+            $recovery['ok'] ? $this->flashSuccess($recovery['message']) : $this->flashError($recovery['message']);
+
+            return $this->redirect('admin/login', 303);
+        }
+
         return $this->view('admin.login', ['title' => 'Connexion']);
     }
 

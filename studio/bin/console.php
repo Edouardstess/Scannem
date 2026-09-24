@@ -10,6 +10,7 @@ declare(strict_types=1);
  *   php bin/console.php seed               Insert demonstration data
  *   php bin/console.php key:generate       Print a value for APP_KEY
  *   php bin/console.php user:create        Create an administrator account
+ *   php bin/console.php user:password      Reset an account's password
  *   php bin/console.php install            migrate + settings + admin account
  *   php bin/console.php maintenance        Prune temporary files and counters
  *   php bin/console.php routes             List the route table
@@ -102,6 +103,26 @@ try {
             info('Ajoutez cette ligne à votre fichier .env :');
             info('');
             info('APP_KEY=' . $key);
+            break;
+
+        case 'user:password':
+            $users = new UserRepository();
+            $email = strtolower($argv[2] ?? prompt('E-mail du compte : '));
+            $user = $users->findByEmail($email);
+
+            if ($user === null) {
+                fail('Aucun compte avec cet e-mail.');
+            }
+
+            $password = $argv[3] ?? prompt('Nouveau mot de passe (10 caractères minimum) : ', true);
+
+            if (mb_strlen($password) < 10) {
+                fail('Le mot de passe doit contenir au moins 10 caractères.');
+            }
+
+            $users->updatePassword((int) $user['id'], $password);
+            (new RateLimiter())->clear('login|email|' . $email);
+            info('Mot de passe modifié pour ' . $email . '. Le blocage de connexion est levé.');
             break;
 
         case 'user:create':
@@ -246,6 +267,7 @@ try {
             info('  seed               Insérer les données de démonstration');
             info('  key:generate       Générer une valeur pour APP_KEY');
             info('  user:create        Créer un compte administrateur');
+            info('  user:password      Réinitialiser le mot de passe d\'un compte');
             info('  install            Installation complète guidée');
             info('  maintenance        Purger fichiers temporaires et compteurs');
             info('  routes             Lister les routes');

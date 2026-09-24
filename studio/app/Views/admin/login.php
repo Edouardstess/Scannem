@@ -55,6 +55,20 @@ $studioName = (string) ($settings['studio_name'] ?? 'L\'ENFANT VISUAL');
             <button class="button button--block" type="submit">Se connecter</button>
         </form>
 
+        <details class="auth__help">
+            <summary>Mot de passe oublié&nbsp;?</summary>
+            <p>
+                Avec votre logiciel FTP (FileZilla), créez dans le dossier
+                <code>storage/private/</code> un fichier nommé <code>reset-password.txt</code> contenant&nbsp;:
+            </p>
+            <pre>email=votre@adresse.com
+password=VotreNouveauMotDePasse</pre>
+            <p>
+                Rechargez ensuite cette page : le mot de passe est changé, le blocage levé,
+                et le fichier supprimé automatiquement. 10 caractères minimum.
+            </p>
+        </details>
+
         <p class="auth__back"><a href="<?= e(url('/')) ?>">Retour au site</a></p>
     </div>
 </main>
