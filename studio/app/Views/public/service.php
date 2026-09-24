@@ -61,8 +61,7 @@ $deliverables = array_values(array_filter(
                 <?php if (($service['price_from'] ?? null) !== null): ?>
                     <p class="detail-aside__price">
                         à partir de
-                        <strong><?= e(number_format((float) $service['price_from'], 0, ',', ' ')) ?>
-                        <?= e((string) $service['currency']) ?></strong>
+                        <strong><?= e(format_price($service['price_from'], (string) $service['currency'])) ?></strong>
                     </p>
                 <?php endif; ?>
                 <?php if (($service['duration'] ?? '') !== ''): ?>

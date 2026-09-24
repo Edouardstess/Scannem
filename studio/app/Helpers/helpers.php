@@ -295,6 +295,47 @@ if (!function_exists('str_excerpt')) {
     }
 }
 
+if (!function_exists('format_price')) {
+    /**
+     * A price the French way: "2 400 €", "380 $", "15 000 HTG".
+     *
+     * Narrow no-break spaces keep the figure and its currency on one line.
+     */
+    function format_price(int|float|string|null $amount, ?string $currency = 'EUR'): string
+    {
+        if ($amount === null || $amount === '') {
+            return '';
+        }
+
+        $value = (float) $amount;
+        $decimals = floor($value) === $value ? 0 : 2;
+        $number = number_format($value, $decimals, ',', "\u{202F}");
+        $code = strtoupper(trim((string) $currency));
+        $symbol = ['EUR' => '€', 'USD' => '$', 'GBP' => '£', 'CAD' => '$ CA', '' => '€'][$code] ?? $code;
+
+        return $number . "\u{202F}" . $symbol;
+    }
+}
+
+if (!function_exists('first_filled')) {
+    /**
+     * The first value that is not blank.
+     *
+     * Settings fields can be emptied from the admin; `??` only skips null, so
+     * an emptied title would otherwise render an empty <h1>.
+     */
+    function first_filled(mixed ...$values): string
+    {
+        foreach ($values as $value) {
+            if (is_scalar($value) && trim((string) $value) !== '') {
+                return trim((string) $value);
+            }
+        }
+
+        return '';
+    }
+}
+
 if (!function_exists('array_pluck')) {
     function array_pluck(array $rows, string $column): array
     {

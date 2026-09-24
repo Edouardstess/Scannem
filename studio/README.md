@@ -182,7 +182,7 @@ php tests/run.php              # tout
 php tests/run.php TokenTest    # une classe
 ```
 
-210 tests, 538 assertions, aucune dépendance externe. Les tests critiques
+212 tests, 547 assertions, aucune dépendance externe. Les tests critiques
 vérifient notamment :
 
 | Ce qui est vérifié | Où |

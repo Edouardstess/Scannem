@@ -22,8 +22,9 @@ View::startSection('content');
         <?php else: ?>
             <div class="service-list">
                 <?php foreach ($services as $service): ?>
-                    <article class="service">
-                        <?php if (($service['image_path'] ?? '') !== ''): ?>
+                    <?php $hasImage = ($service['image_path'] ?? '') !== ''; ?>
+                    <article class="service<?= $hasImage ? '' : ' service--text' ?>">
+                        <?php if ($hasImage): ?>
                             <div class="service__media">
                                 <img src="<?= e(url((string) $service['image_path'])) ?>"
                                      alt="<?= e((string) $service['title']) ?>" loading="lazy" decoding="async">
@@ -31,30 +32,37 @@ View::startSection('content');
                         <?php endif; ?>
 
                         <div class="service__body">
-                            <h2 class="service__title"><?= e((string) $service['title']) ?></h2>
+                            <div class="service__intro">
+                                <h2 class="service__title"><?= e((string) $service['title']) ?></h2>
 
-                            <?php if (($service['summary'] ?? '') !== ''): ?>
-                                <p class="service__summary"><?= e((string) $service['summary']) ?></p>
-                            <?php endif; ?>
-
-                            <dl class="service__meta">
-                                <?php if (($service['price_from'] ?? null) !== null): ?>
-                                    <div>
-                                        <dt>Tarif</dt>
-                                        <dd>à partir de
-                                            <?= e(number_format((float) $service['price_from'], 0, ',', ' ')) ?>
-                                            <?= e((string) $service['currency']) ?>
-                                        </dd>
-                                    </div>
+                                <?php if (($service['summary'] ?? '') !== ''): ?>
+                                    <p class="service__summary"><?= e((string) $service['summary']) ?></p>
                                 <?php endif; ?>
-                                <?php if (($service['duration'] ?? '') !== ''): ?>
-                                    <div><dt>Durée</dt><dd><?= e((string) $service['duration']) ?></dd></div>
-                                <?php endif; ?>
-                            </dl>
+                            </div>
 
-                            <a class="link-arrow" href="<?= e(url('/services/' . (string) $service['slug'])) ?>">
-                                Voir le détail
-                            </a>
+                            <div class="service__aside">
+                                <dl class="service__meta">
+                                    <?php if (($service['price_from'] ?? null) !== null): ?>
+                                        <div class="service__price">
+                                            <dt>À partir de</dt>
+                                            <dd><?= e(format_price($service['price_from'], (string) $service['currency'])) ?></dd>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (($service['duration'] ?? '') !== ''): ?>
+                                        <div><dt>Durée</dt><dd><?= e((string) $service['duration']) ?></dd></div>
+                                    <?php endif; ?>
+                                </dl>
+
+                                <div class="service__actions">
+                                    <?php if (!empty($settings['booking_enabled'])): ?>
+                                        <a class="button button--small"
+                                           href="<?= e(url('/reservation') . '?service=' . (int) $service['id']) ?>">Réserver</a>
+                                    <?php endif; ?>
+                                    <a class="link-arrow" href="<?= e(url('/services/' . (string) $service['slug'])) ?>">
+                                        Voir le détail
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </article>
                 <?php endforeach; ?>

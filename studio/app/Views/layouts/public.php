@@ -17,10 +17,10 @@ $currentPath = $currentPath ?? '/';
 $studioName = (string) ($settings['studio_name'] ?? 'L\'ENFANT VISUAL');
 $pageTitle = isset($title) && $title !== null && $title !== ''
     ? $title . ' — ' . $studioName
-    : $studioName . ' — ' . (string) ($settings['tagline'] ?? '');
+    : $studioName . (first_filled($settings['tagline'] ?? '') !== '' ? ' — ' . first_filled($settings['tagline'] ?? '') : '');
 $description = View::section('meta_description') !== ''
     ? View::section('meta_description')
-    : (string) ($settings['meta_description'] ?? $settings['tagline'] ?? '');
+    : first_filled($settings['meta_description'] ?? '', $settings['tagline'] ?? '', $settings['hero_subtitle'] ?? '');
 $ogImage = ($settings['hero_image'] ?? '') !== '' ? url((string) $settings['hero_image']) : null;
 $canonical = canonical_url(ltrim($currentPath, '/'));
 ?>

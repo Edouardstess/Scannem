@@ -12,7 +12,7 @@ View::startSection('content');
 ?>
 
 <section class="page-head">
-    <div class="wrap wrap--narrow">
+    <div class="wrap wrap--medium">
         <p class="section__eyebrow">Contact</p>
         <h1 class="page-head__title">Écrivez-moi</h1>
         <p class="page-head__text">Je réponds sous 48&nbsp;heures.</p>
@@ -20,7 +20,7 @@ View::startSection('content');
 </section>
 
 <section class="section">
-    <div class="wrap wrap--narrow">
+    <div class="wrap wrap--medium">
         <div class="form-layout">
             <form class="form" method="post" action="<?= e(url('/contact')) ?>" novalidate>
                 <?= csrf_field() ?>
@@ -123,7 +123,7 @@ View::startSection('content');
                 <?php if (!empty($settings['booking_enabled'])): ?>
                     <p class="contact-aside__row">
                         <a class="link-arrow" href="<?= e(url('/reservation')) ?>">
-                            Réserver directement une séance
+                            Réserver une séance
                         </a>
                     </p>
                 <?php endif; ?>

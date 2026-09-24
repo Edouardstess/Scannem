@@ -14,10 +14,10 @@ $text = (string) ($settings['about_text'] ?? '');
 ?>
 
 <section class="page-head">
-    <div class="wrap wrap--narrow">
+    <div class="wrap">
         <p class="section__eyebrow">À propos</p>
         <h1 class="page-head__title">
-            <?= e((string) ($settings['about_title'] ?? 'À propos')) ?>
+            <?= e(first_filled($settings['about_title'] ?? '', 'À propos')) ?>
         </h1>
     </div>
 </section>
@@ -36,8 +36,14 @@ $text = (string) ($settings['about_text'] ?? '');
                 <?php if ($text !== ''): ?>
                     <?= nl2br(e($text)) ?>
                 <?php else: ?>
-                    <p class="empty">La présentation sera publiée prochainement.</p>
+                    <?php /* No "coming soon" placeholder in public: the tagline stands in until the text is written. */ ?>
+                    <p class="prose--lead"><?= e(first_filled($settings['tagline'] ?? '', $settings['hero_subtitle'] ?? '')) ?></p>
                 <?php endif; ?>
+
+                <p class="about__actions">
+                    <a class="button" href="<?= e(url('/portfolio')) ?>">Voir le portfolio</a>
+                    <a class="button button--ghost" href="<?= e(url('/contact')) ?>">Me contacter</a>
+                </p>
 
                 <?php if (($settings['speciality'] ?? '') !== ''): ?>
                     <p class="about__speciality"><?= e((string) $settings['speciality']) ?></p>

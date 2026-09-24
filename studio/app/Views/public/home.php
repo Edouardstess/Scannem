@@ -14,9 +14,9 @@ View::extend('layouts.public');
 View::startSection('content');
 
 $hero = (string) ($settings['hero_image'] ?? '');
-$heroTitle = (string) ($settings['hero_title'] ?? $settings['tagline'] ?? '');
+$heroTitle = first_filled($settings['hero_title'] ?? '', $settings['tagline'] ?? '', $settings['studio_name'] ?? '');
 $heroSubtitle = (string) ($settings['hero_subtitle'] ?? '');
-$photographer = (string) ($settings['photographer_name'] ?? $settings['studio_name'] ?? '');
+$photographer = first_filled($settings['photographer_name'] ?? '', $settings['studio_name'] ?? '');
 $speciality = (string) ($settings['speciality'] ?? '');
 
 $testimonials = is_array($settings['testimonials'] ?? null) ? $settings['testimonials'] : [];
@@ -157,8 +157,7 @@ $process = is_array($settings['process_steps'] ?? null) ? $settings['process_ste
                         <?php endif; ?>
                         <?php if (($service['price_from'] ?? null) !== null): ?>
                             <p class="card__price">
-                                À partir de <?= e(number_format((float) $service['price_from'], 0, ',', ' ')) ?>
-                                <?= e((string) $service['currency']) ?>
+                                À partir de <?= e(format_price($service['price_from'], (string) $service['currency'])) ?>
                             </p>
                         <?php endif; ?>
                         <a class="link-arrow" href="<?= e(url('/services/' . (string) $service['slug'])) ?>">

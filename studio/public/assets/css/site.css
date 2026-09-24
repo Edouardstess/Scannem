@@ -37,6 +37,7 @@
     --radius: 2px;
     --wrap: 1280px;
     --wrap-narrow: 760px;
+    --wrap-medium: 1060px;
     --header-height: 76px;
 
     --transition: 180ms cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -96,6 +97,7 @@ a:hover { text-decoration-color: currentColor; }
 
 .wrap { width: 100%; max-width: var(--wrap); margin: 0 auto; padding: 0 var(--space-3); }
 .wrap--narrow { max-width: var(--wrap-narrow); }
+.wrap--medium { max-width: var(--wrap-medium); }
 
 .muted { color: var(--color-muted); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
@@ -350,7 +352,11 @@ a:hover { text-decoration-color: currentColor; }
 }
 
 @media (max-width: 900px) { .selection { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 560px) { .selection { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+    /* Two small columns: six full-width 4:5 tiles meant three screens of scrolling. */
+    .selection { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+    .selection__tag { padding: 0.4rem 0.6rem; font-size: 0.6rem; letter-spacing: 0.12em; }
+}
 
 .feature-image { max-height: 60vh; overflow: hidden; }
 .feature-image img { width: 100%; height: 100%; max-height: 60vh; object-fit: cover; }
@@ -419,6 +425,27 @@ a:hover { text-decoration-color: currentColor; }
 .service__meta dt { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-muted); }
 .service__meta dd { margin: 0; }
 
+/* Text-only formula: a full-width row, description left, price and action right. */
+.service--text { display: block; padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.service-list > .service--text:first-child { border-top: 0; padding-top: 0; }
+.service__body { display: grid; gap: var(--space-2); }
+.service--text .service__body {
+    grid-template-columns: minmax(0, 1.5fr) minmax(240px, 1fr); gap: var(--space-4); align-items: start;
+}
+.service__summary { margin: var(--space-1) 0 0; max-width: 58ch; }
+.service__aside { display: grid; gap: var(--space-2); }
+.service--text .service__aside { padding-left: var(--space-3); border-left: 1px solid var(--color-border); }
+.service--text .service__meta { margin: 0; }
+.service__price dd { font-family: var(--font-serif); font-size: var(--step-2); line-height: 1.1; }
+.service__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+@media (max-width: 760px) {
+    .service--text .service__body { grid-template-columns: 1fr; gap: var(--space-2); }
+    .service--text .service__aside { padding-left: 0; border-left: 0; }
+}
+
+.about__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+
 @media (max-width: 760px) {
     .service { grid-template-columns: 1fr; }
     .service:nth-child(even) .service__media { order: 0; }
@@ -463,7 +490,7 @@ a:hover { text-decoration-color: currentColor; }
 .form { display: grid; gap: var(--space-3); }
 .form--compact { max-width: 520px; }
 
-.form-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr); gap: var(--space-4); align-items: start; }
+.form-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); gap: var(--space-4); align-items: start; }
 @media (max-width: 760px) { .form-layout { grid-template-columns: 1fr; } }
 
 .field { display: grid; gap: 0.4rem; }
@@ -543,7 +570,7 @@ input[type="file"] { font-size: 0.85rem; }
 
 /* --- Footer ------------------------------------------------------------- */
 
-.site-footer { margin-top: var(--space-5); padding: var(--space-5) 0 var(--space-3); background: var(--color-surface-alt); }
+.site-footer { margin-top: 0; padding: var(--space-5) 0 var(--space-3); background: var(--color-surface-alt); }
 .site-footer__inner {
     max-width: var(--wrap); margin: 0 auto; padding: 0 var(--space-3);
     display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--space-3);
@@ -556,7 +583,9 @@ input[type="file"] { font-size: 0.85rem; }
 }
 .site-footer__column p { margin: 0 0 0.35rem; }
 .site-footer__legal {
-    max-width: var(--wrap); margin: var(--space-4) auto 0; padding: var(--space-2) var(--space-3) 0;
+    /* Same edges as the columns above: the rule stops where the text does. */
+    width: min(calc(100% - 2 * var(--space-3)), calc(var(--wrap) - 2 * var(--space-3)));
+    margin: var(--space-4) auto 0; padding: var(--space-2) 0 0;
     border-top: 1px solid var(--color-border);
     display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2);
     font-size: 0.8rem; color: var(--color-muted);
