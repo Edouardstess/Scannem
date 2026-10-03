@@ -17,15 +17,23 @@ $logo = (string) ($settings['logo_path'] ?? '');
 $email = trim((string) ($settings['contact_email'] ?? ''));
 $booking = !empty($settings['booking_enabled']);
 
+// The dock carries the same three pages as on the homepage; the full-screen
+// menu (narrow screens) and the footer list everything.
+$dockLinks = [
+    ['path' => '/portfolio', 'label' => 'Portfolio'],
+    ['path' => '/services',  'label' => 'Prestations'],
+    ['path' => '/contact',   'label' => 'Contact'],
+];
+
 $links = [
-    ['path' => '/portfolio', 'label' => 'Portfolio', 'optional' => false],
-    ['path' => '/services',  'label' => 'Prestations', 'optional' => false],
-    ['path' => '/a-propos',  'label' => 'À propos', 'optional' => true],
-    ['path' => '/contact',   'label' => 'Contact', 'optional' => false],
+    ['path' => '/portfolio', 'label' => 'Portfolio'],
+    ['path' => '/services',  'label' => 'Prestations'],
+    ['path' => '/a-propos',  'label' => 'À propos'],
+    ['path' => '/contact',   'label' => 'Contact'],
 ];
 
 if (!empty($settings['client_area_enabled'])) {
-    $links[] = ['path' => '/espace-client', 'label' => 'Espace client', 'optional' => true];
+    $links[] = ['path' => '/espace-client', 'label' => 'Espace client'];
 }
 
 $isActive = static fn (string $path): bool => str_starts_with($currentPath, $path);
@@ -44,8 +52,8 @@ $isActive = static fn (string $path): bool => str_starts_with($currentPath, $pat
     </a>
 
     <nav class="dock-nav" aria-label="Navigation principale">
-        <?php foreach ($links as $link): ?>
-            <a class="dock-link<?= $link['optional'] ? ' dock-link--opt' : '' ?>" href="<?= e(url($link['path'])) ?>"<?= $isActive($link['path']) ? ' aria-current="page"' : '' ?>><?= e($link['label']) ?></a>
+        <?php foreach ($dockLinks as $link): ?>
+            <a class="dock-link" href="<?= e(url($link['path'])) ?>"<?= $isActive($link['path']) ? ' aria-current="page"' : '' ?>><?= e($link['label']) ?></a>
         <?php endforeach; ?>
     </nav>
 

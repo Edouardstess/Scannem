@@ -58,6 +58,7 @@ $classicHome = $currentPath === '/';
 <link rel="stylesheet" href="<?= e(asset('css/site.css')) ?>">
 <?php endif; ?>
 <link rel="stylesheet" href="<?= e(asset('immersif/pages.css')) ?>">
+<link rel="stylesheet" href="<?= e(asset('immersif/dock.css')) ?>">
 <link rel="icon" href="<?= e(asset('images/favicon.svg')) ?>" type="image/svg+xml">
 <script src="<?= e(asset('immersif/pages-head.js')) ?>"></script>
 

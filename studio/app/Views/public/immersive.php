@@ -66,6 +66,7 @@ $isAnchor = str_starts_with($ctaUrl, '#');
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="<?= e(asset('immersif/styles.css')) ?>">
+  <link rel="stylesheet" href="<?= e(asset('immersif/dock.css')) ?>">
   <style>
     /* Accent chosen in Admin → Page d'accueil (validated #rrggbb). */
     :root { --lime: <?= e($accent) ?>; --lime-ink: <?= e($accentInk) ?>; }
@@ -249,8 +250,9 @@ $isAnchor = str_starts_with($ctaUrl, '#');
   <header class="dock" id="dock">
     <a class="dock-wordmark" href="#hero" data-nav><?= e((string) $brand['name']) ?></a>
     <nav class="dock-nav" aria-label="Navigation principale">
-      <a class="dock-link mono" href="#travaux" data-nav><?= e((string) $c['nav']['proof']) ?></a>
-      <a class="dock-link mono" href="#explorer" data-nav data-landing="0.8"><?= e((string) $c['nav']['universes']) ?></a>
+      <a class="dock-link mono" href="<?= e(url('/portfolio')) ?>">Portfolio</a>
+      <a class="dock-link mono" href="<?= e(url('/services')) ?>">Prestations</a>
+      <a class="dock-link mono" href="<?= e(url('/contact')) ?>">Contact</a>
     </nav>
     <a class="dock-cta mono" href="<?= e($ctaUrl) ?>"<?= $isAnchor ? ' data-nav' : '' ?>><?= e((string) $c['nav']['cta']) ?></a>
   </header>

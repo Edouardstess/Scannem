@@ -68,8 +68,6 @@ final class ImmersiveHomeService
         'contact_kicker' => 'UN PROJET EN TÊTE ?',
         'reassurance'    => 'RÉPONSE SOUS 48 H — DEVIS GRATUIT, SANS ENGAGEMENT',
         'signature'      => 'PHOTOGRAPHIÉ AVEC SOIN',
-        'nav_proof'      => 'TRAVAUX',
-        'nav_steps'      => 'ÉTAPES',
         'nav_cta'        => 'RÉSERVER',
     ];
 
@@ -126,7 +124,7 @@ final class ImmersiveHomeService
                 'signature'   => $t['signature'],
                 'socials'     => $this->socials(),
             ],
-            'nav' => ['proof' => $t['nav_proof'], 'universes' => $t['nav_steps'], 'cta' => $t['nav_cta']],
+            'nav' => ['cta' => $t['nav_cta']],
             'hook' => [
                 'line1'    => $t['hook_line1'],
                 'line2a'   => $t['hook_line2a'],

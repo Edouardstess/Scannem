@@ -149,11 +149,7 @@ $field = static fn (string $key, string $label, string $hint = '', int $max = 19
             <?= View::include('admin.homepage.field', $field('reassurance', 'Réassurance', 'L’e-mail affiché est celui des Paramètres.', 90)) ?>
         </div>
         <?= View::include('admin.homepage.field', $field('signature', 'Signature de bas de page', '', 60)) ?>
-        <div class="field-row">
-            <?= View::include('admin.homepage.field', $field('nav_proof', 'Lien « Travaux »', '', 12)) ?>
-            <?= View::include('admin.homepage.field', $field('nav_steps', 'Lien « Étapes »', '', 12)) ?>
-            <?= View::include('admin.homepage.field', $field('nav_cta', 'Bouton du haut', '', 12)) ?>
-        </div>
+        <?= View::include('admin.homepage.field', $field('nav_cta', 'Bouton du haut', 'À côté de Portfolio · Prestations · Contact.', 12)) ?>
     </fieldset>
 
     <div class="form__actions">

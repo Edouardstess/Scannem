@@ -1,0 +1,36 @@
+/* ═══════════════════════════════════════════════════════════════════
+   L'ENFANT VISUAL — barre du haut : PORTFOLIO · PRESTATIONS · CONTACT
+
+   Écart assumé au skill « Site Immersif » (demande du photographe) : les
+   trois pages restent dans la barre à toutes les largeurs. Sur écran
+   étroit, le modèle les masquait faute de place ; ici elles passent sur
+   une seconde ligne de la barre, réparties sur toute sa largeur.
+   Chargée après styles.css (accueil) et après pages.css (autres pages).
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dock { white-space: nowrap; }
+.dock-wordmark { white-space: nowrap; }
+
+@media (max-width: 900px) {
+  :root { --dock-h: 100px; }
+
+  .dock { flex-wrap: wrap; row-gap: 2px; }
+  .dock .dock-nav,
+  .dock-nav {
+    display: flex;
+    order: 3;
+    flex: 1 0 100%;
+    justify-content: space-between;
+    margin: 4px 0 0;
+    padding-top: 2px;
+    border-top: 1px solid var(--ink-faint);
+  }
+  .dock-nav .dock-link,
+  .dock-nav .dock-link:first-child { display: inline-block; padding: 10px 2px 6px; }
+  .dock-nav .dock-link::after { left: 2px; right: 2px; bottom: 3px; }
+  .dock-wordmark { margin-right: auto; }
+}
+
+@media (max-width: 480px) {
+  .dock .dock-nav, .dock-nav { display: flex; }
+}

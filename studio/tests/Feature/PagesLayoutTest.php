@@ -64,6 +64,28 @@ final class PagesLayoutTest extends TestCase
         $this->assertSame(1, preg_match('/class="dock-link[^"]*" href="[^"]*\/services" aria-current="page"/', $html));
     }
 
+    public function testTheDockOffersPortfolioServicesAndContact(): void
+    {
+        $inner = View::render('public.client_area', []);
+        $home = View::render('public.immersive', [
+            'content'   => (new \App\Services\ImmersiveHomeService(SettingsService::make()->all()))->content(),
+            'theme'     => 'light', 'accent' => '#f8cf9f', 'accentInk' => '#1a1915',
+            'ctaUrl'    => url('/reservation'), 'currentPath' => '/',
+        ]);
+
+        foreach (['page intérieure' => $inner, 'accueil' => $home] as $where => $html) {
+            preg_match('/<nav class="dock-nav".*?<\/nav>/s', $html, $nav);
+            preg_match_all('/<a class="dock-link[^"]*" href="([^"]+)"[^>]*>([^<]+)<\/a>/', $nav[0] ?? '', $links);
+
+            $this->assertSame(['Portfolio', 'Prestations', 'Contact'], array_map('trim', $links[2]), $where);
+            $this->assertSame(
+                [url('/portfolio'), url('/services'), url('/contact')],
+                $links[1],
+                $where
+            );
+        }
+    }
+
     public function testAServiceWithoutImageBorrowsAPortfolioPhoto(): void
     {
         $html = View::render('public.services', [

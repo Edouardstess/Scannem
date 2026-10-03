@@ -28,7 +28,7 @@ final class HomepageRequest extends FormRequest
         'step_1_name' => 28, 'step_2_name' => 28, 'step_3_name' => 28,
         'step_1_desc' => 180, 'step_2_desc' => 180, 'step_3_desc' => 180,
         'pill' => 18, 'finale' => 30,
-        'nav_proof' => 12, 'nav_steps' => 12, 'nav_cta' => 12,
+        'nav_cta' => 12,
     ];
 
     protected function rules(): array

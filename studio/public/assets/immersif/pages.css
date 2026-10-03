@@ -604,9 +604,6 @@ body.client { font-family: var(--sans); background: var(--bone); color: var(--in
 .client .gate__error { color: var(--err); }
 
 /* ═══════════ RESPONSIVE ═══════════ */
-@media (max-width: 1100px) {
-  .dock-nav .dock-link--opt { display: none; }
-}
 @media (max-width: 900px) {
   :root { --gutter: 20px; --t-heading: clamp(27px, 6.6vw, 40px); --dock-h: 62px; }
   body.im { font-size: 17px; }
