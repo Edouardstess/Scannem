@@ -632,3 +632,53 @@ input[type="file"] { font-size: 0.85rem; }
     .location__inner { grid-template-columns: 1fr; gap: var(--space-3); }
     .location__map { aspect-ratio: 1 / 1; }
 }
+
+/* =========================================================================
+   Identité « Site Immersif » — the inner pages speak the homepage's language:
+   Bricolage Grotesque for everything set large, DM Mono for small capitals,
+   the homepage accent on calls to action, and the floating header of the
+   immersive page (public/assets/immersif/styles.css, .dock).
+   ========================================================================= */
+
+:root {
+    --font-sans: 'Bricolage Grotesque', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-serif: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --color-cta: #f8cf9f;
+    --color-cta-ink: #1a1915;
+}
+
+/* Display type: light weight, tight tracking, as on the homepage. */
+.hero__title, .section__title, .page-head__title, .cta__title, .service__title,
+.card__title, .steps__title, .prose h2, .error-page__title, .site-footer__brand {
+    font-weight: 300; letter-spacing: -0.02em; text-wrap: balance;
+}
+.quote__text { font-style: normal; letter-spacing: -0.01em; }
+
+/* Small capitals in mono. */
+.section__eyebrow, .hero__eyebrow, .site-nav__link, .button, .link-arrow,
+.site-footer__heading, .service__meta dt, .contact-aside__row > span,
+.selection__tag, .filters__link, .mono, .site-footer__legal, .masonry__caption {
+    font-family: var(--font-mono);
+}
+.section__eyebrow, .site-nav__link, .site-footer__heading { letter-spacing: 0.12em; }
+.button { font-weight: 500; letter-spacing: 0.06em; }
+
+/* Floating header, like the homepage dock: 10px from the edges, raised. */
+.site-header {
+    top: 10px; margin: 10px 10px 0;
+    background: var(--color-surface);
+    border: 0; border-radius: var(--radius);
+    box-shadow: 0 1px 0 rgba(26, 25, 21, 0.04), 0 10px 30px -18px rgba(26, 25, 21, 0.35);
+}
+.site-header.is-scrolled { border-bottom-color: transparent; }
+.site-header__inner { min-height: 64px; }
+.site-header__wordmark { font-family: var(--font-sans); font-weight: 500; font-size: 1.15rem; letter-spacing: -0.01em; }
+
+/* The call to action carries the homepage accent. */
+.site-header .button, .cta .button {
+    background: var(--color-cta); color: var(--color-cta-ink); border-color: var(--color-cta);
+}
+.site-header .button:hover, .cta .button:hover {
+    background: color-mix(in srgb, var(--color-cta) 82%, #000); border-color: transparent; color: var(--color-cta-ink);
+}

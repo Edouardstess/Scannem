@@ -21,12 +21,19 @@ $hex = static function (mixed $value, string $fallback): string {
 
 $primary = $hex($settings['color_primary'] ?? null, '#1a1a1a');
 $accent = $hex($settings['color_accent'] ?? null, '#b08d57');
-$background = $hex($settings['color_background'] ?? null, '#fbfaf8');
+$background = $hex($settings['color_background'] ?? null, '#f4f3f0');
+// The homepage accent (Admin → Page d'accueil) also marks the call to action
+// on every other page, so the whole site reads as one identity.
+$immersive = new \App\Services\ImmersiveHomeService($settings);
+$cta = $immersive->accent();
+$ctaInk = $immersive->accentInk();
 ?>
 <style>
 :root {
     --color-primary: <?= e($primary) ?>;
     --color-accent: <?= e($accent) ?>;
     --color-background: <?= e($background) ?>;
+    --color-cta: <?= e($cta) ?>;
+    --color-cta-ink: <?= e($ctaInk) ?>;
 }
 </style>

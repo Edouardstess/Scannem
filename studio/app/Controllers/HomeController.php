@@ -8,6 +8,8 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Repositories\PortfolioRepository;
 use App\Repositories\ServiceRepository;
+use App\Services\ImmersiveHomeService;
+use App\Services\SettingsService;
 
 final class HomeController extends Controller
 {
@@ -23,6 +25,12 @@ final class HomeController extends Controller
     /** GET / */
     public function index(Request $request): Response
     {
+        $settings = (new SettingsService())->all();
+
+        if (($settings['home_layout'] ?? 'immersive') === 'immersive') {
+            return $this->immersive($request, $settings);
+        }
+
         $featured = $this->portfolio->featured(self::SELECTION_SIZE);
 
         // The selection is a designed block, so a half-empty last row reads
@@ -38,6 +46,28 @@ final class HomeController extends Controller
             'featured'   => $featured,
             'services'   => $this->services->published(),
             'categories' => $this->portfolio->categoriesWithItems(),
+        ]);
+    }
+
+    /**
+     * The animated one-page homepage (template « Site Immersif »), filled
+     * from the settings and the published portfolio.
+     *
+     * @param array<string, mixed> $settings
+     */
+    private function immersive(Request $request, array $settings): Response
+    {
+        $home = new ImmersiveHomeService($settings, $this->portfolio);
+
+        return $this->view('public.immersive', [
+            'content'     => $home->content(),
+            'theme'       => $home->theme(),
+            'accent'      => $home->accent(),
+            'accentInk'   => $home->accentInk(),
+            // « Réserver » opens the booking form when it is enabled,
+            // otherwise it scrolls to the contact block at the bottom.
+            'ctaUrl'      => !empty($settings['booking_enabled']) ? url('/reservation') : '#contact',
+            'currentPath' => '/',
         ]);
     }
 

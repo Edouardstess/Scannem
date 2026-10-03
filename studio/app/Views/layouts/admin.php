@@ -24,6 +24,7 @@ $sections = [
     ['path' => '/admin/clients',    'label' => 'Clients',         'permission' => 'client.manage',    'exact' => false],
     ['path' => '/admin/events',     'label' => 'Événements',      'permission' => 'event.manage',     'exact' => false],
     ['path' => '/admin/galleries',  'label' => 'Galeries',        'permission' => 'gallery.view',     'exact' => false],
+    ['path' => '/admin/homepage',   'label' => 'Page d’accueil',  'permission' => 'settings.manage',  'exact' => false],
     ['path' => '/admin/portfolio',  'label' => 'Portfolio',       'permission' => 'portfolio.manage', 'exact' => false],
     ['path' => '/admin/services',   'label' => 'Prestations',     'permission' => 'portfolio.manage', 'exact' => false],
     ['path' => '/admin/messages',   'label' => 'Messages',        'permission' => 'message.manage',   'exact' => false],

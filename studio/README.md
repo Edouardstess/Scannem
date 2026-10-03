@@ -143,6 +143,28 @@ Documentation complète : [`docs/installation.md`](docs/installation.md).
 Consulte les statistiques : consultations, téléchargements, dernière ouverture,
 sélection du client, et un journal d'audit de ce qui s'est passé.
 
+**Visiteur**
+
+La page d'accueil est un récit animé au défilement, construit avec le skill
+« Site Immersif » (`.claude/skills/site-immersif-skill/`) : accroche, image
+plein écran, démarche, travaux, devise, étapes, témoignage, contact. Toutes
+les photos viennent de la base de données :
+
+- l'image d'ouverture est l'« image d'accueil » des **Paramètres**, ou à
+  défaut la première photo du portfolio ;
+- les travaux, les images flottantes et la traînée qui suit le curseur sont
+  les photos **publiées** du **Portfolio**, celles cochées « En vedette »
+  d'abord ;
+- tant qu'aucune photo n'est publiée, des visuels provisoires s'affichent.
+
+Les textes, le thème (clair/sombre) et la couleur d'accent se règlent dans
+**Admin → Page d'accueil** ; le formulaire refuse ce qui casserait
+l'animation (titre trop long, mot entouré absent…). Le même écran permet de
+revenir à la page d'accueil classique. Le moteur
+(`public/assets/immersif/app.js`) est celui du skill, inchangé ; le contenu
+est rendu côté serveur par `app/Views/public/immersive.php` et transmis au
+script sous forme de JSON inerte, compatible avec la CSP stricte.
+
 ---
 
 ## Architecture

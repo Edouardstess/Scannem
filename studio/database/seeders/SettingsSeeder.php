@@ -44,9 +44,9 @@ final class SettingsSeeder
                 'meta_description'  => 'Photographe de mariage, de portrait et d\'événement. '
                     . 'Galeries privées, livraison en haute définition.',
                 'footer_text'       => 'Photographe de mariage, de portrait et d\'événement.',
-                'color_primary'     => '#1a1a1a',
-                'color_accent'      => '#b08d57',
-                'color_background'  => '#fbfaf8',
+                'color_primary'     => '#1a1915',
+                'color_accent'      => '#9a5c27',
+                'color_background'  => '#f4f3f0',
                 'booking_enabled'   => true,
                 'client_area_enabled' => true,
             ],
