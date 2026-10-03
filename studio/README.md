@@ -165,6 +165,18 @@ revenir à la page d'accueil classique. Le moteur
 est rendu côté serveur par `app/Views/public/immersive.php` et transmis au
 script sous forme de JSON inerte, compatible avec la CSP stricte.
 
+Toutes les autres pages parlent la même langue : même barre flottante
+(menu plein écran sur téléphone), même pied de page avec l'e-mail en grand et
+le nom du studio sur toute la largeur, même bande d'accent en diagonale,
+mêmes ovales tracés à la main. Titres qui montent mot à mot, photos qui se
+dévoilent, colonnes du portfolio en parallaxe avec visionneuse, liste des
+prestations dont la photo suit le curseur, rideau de transition entre les
+pages. Les galeries privées des clients reprennent la typographie et la
+barre. Feuille de style : `public/assets/immersif/pages.css` ; mouvement :
+`public/assets/immersif/pages.js`. Tout est de l'amélioration progressive :
+sans JavaScript ou avec « réduire les animations », chaque page reste
+complète et lisible.
+
 ---
 
 ## Architecture

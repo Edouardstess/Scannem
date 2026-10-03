@@ -265,11 +265,14 @@ sur la paire adjacente) et chaque graphique propose ses données en tableau.
 
 ## 7. Front-end
 
-Trois fichiers, aucune dépendance, aucun CDN hors Google Fonts.
+Aucune dépendance, aucun CDN hors Google Fonts.
 
 | Fichier | Portée |
 |---|---|
-| `site.js` | navigation mobile, lightbox du portfolio |
+| `immersif/app.js` | page d'accueil immersive (moteur du skill « Site Immersif », non modifié) |
+| `immersif/boot.js` | lit le contenu JSON rendu par PHP et le passe à `app.js` |
+| `immersif/pages-head.js` | marque `<html class="js">` avant le premier rendu (révélations sans clignotement) |
+| `immersif/pages.js` | pages intérieures : révélations, parallaxe, menu plein écran, rideau de transition, visionneuse du portfolio, image qui suit le curseur, carte à la demande |
 | `gallery.js` | galerie client : pagination, lightbox, favoris, ZIP |
 | `admin.js` | barre latérale, confirmations, import, réordonnancement, survol des graphiques |
 

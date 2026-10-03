@@ -23,15 +23,16 @@ $headline = match ((int) $status) {
 };
 ?>
 
-<section class="error-page">
-    <div class="wrap wrap--narrow">
-        <p class="error-page__code"><?= (int) $status ?></p>
-        <h1 class="error-page__title"><?= e($headline) ?></h1>
-        <?php if (($message ?? '') !== ''): ?>
-            <p class="error-page__text"><?= e((string) $message) ?></p>
-        <?php endif; ?>
-        <a class="button" href="<?= e(url('/')) ?>">Retour à l'accueil</a>
-    </div>
+<section class="err">
+    <p class="err-code" aria-hidden="true" data-reveal><?= (int) $status ?></p>
+    <h1 class="err-title split"><?= View::include('partials.split', ['text' => $headline]) ?></h1>
+    <?php if (($message ?? '') !== ''): ?>
+        <p class="err-text" data-reveal style="--i: 2"><?= e((string) $message) ?></p>
+    <?php endif; ?>
+    <p class="actions" data-reveal style="--i: 3">
+        <a class="btn btn--ink" href="<?= e(url('/')) ?>">Retour à l'accueil <span class="arr" aria-hidden="true">→</span></a>
+        <a class="btn btn--line" href="<?= e(url('/portfolio')) ?>">Voir le portfolio</a>
+    </p>
 </section>
 
 <?php View::endSection(); ?>

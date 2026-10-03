@@ -1,6 +1,7 @@
 <?php
 /**
- * Public site layout.
+ * Public site layout, in the identity of the immersive homepage: same
+ * floating dock, same footer, same type and accent (Admin → Page d'accueil).
  *
  * @var array<string, mixed> $settings
  * @var string|null          $title
@@ -8,6 +9,7 @@
  */
 
 use App\Core\View;
+use App\Services\ImmersiveHomeService;
 
 // Settings are shared on every normal request; the fallback keeps the
 // error pages renderable when a failure happens before that.
@@ -23,9 +25,12 @@ $description = View::section('meta_description') !== ''
     : first_filled($settings['meta_description'] ?? '', $settings['tagline'] ?? '', $settings['hero_subtitle'] ?? '');
 $ogImage = ($settings['hero_image'] ?? '') !== '' ? url((string) $settings['hero_image']) : null;
 $canonical = canonical_url(ltrim($currentPath, '/'));
+$theme = (new ImmersiveHomeService($settings))->theme();
+// The classic homepage still uses the original stylesheet for its sections.
+$classicHome = $currentPath === '/';
 ?>
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="<?= e($theme) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -49,13 +54,17 @@ $canonical = canonical_url(ltrim($currentPath, '/'));
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500&family=DM+Mono:wght@400;500&display=swap">
+<?php if ($classicHome): ?>
 <link rel="stylesheet" href="<?= e(asset('css/site.css')) ?>">
+<?php endif; ?>
+<link rel="stylesheet" href="<?= e(asset('immersif/pages.css')) ?>">
 <link rel="icon" href="<?= e(asset('images/favicon.svg')) ?>" type="image/svg+xml">
+<script src="<?= e(asset('immersif/pages-head.js')) ?>"></script>
 
 <?= View::include('partials.theme', ['settings' => $settings]) ?>
 <?= View::include('partials.schema', ['settings' => $settings, 'currentPath' => $currentPath]) ?>
 </head>
-<body class="site<?= $currentPath === '/' ? ' site--home' : '' ?>">
+<body class="im site<?= $classicHome ? ' site--home' : '' ?>">
 
 <a class="skip-link" href="#main">Aller au contenu</a>
 
@@ -68,7 +77,7 @@ $canonical = canonical_url(ltrim($currentPath, '/'));
 
 <?= View::include('partials.footer', ['settings' => $settings]) ?>
 
-<script src="<?= e(asset('js/site.js')) ?>" defer></script>
+<script src="<?= e(asset('immersif/pages.js')) ?>" defer></script>
 <?= View::section('scripts') ?>
 </body>
 </html>

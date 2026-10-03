@@ -19,9 +19,10 @@ $settings = $settings ?? \App\Services\SettingsService::DEFAULTS;
 
 $studioName = (string) ($settings['studio_name'] ?? 'L\'ENFANT VISUAL');
 $logo = (string) ($settings['logo_path'] ?? '');
+$theme = (new \App\Services\ImmersiveHomeService($settings))->theme();
 ?>
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="<?= e($theme) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -36,6 +37,7 @@ $logo = (string) ($settings['logo_path'] ?? '');
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500&family=DM+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="<?= e(asset('css/site.css')) ?>">
 <link rel="stylesheet" href="<?= e(asset('css/gallery.css')) ?>">
+<link rel="stylesheet" href="<?= e(asset('immersif/pages.css')) ?>">
 <link rel="icon" href="<?= e(asset('images/favicon.svg')) ?>" type="image/svg+xml">
 
 <?= View::include('partials.theme', ['settings' => $settings]) ?>
@@ -63,7 +65,8 @@ $logo = (string) ($settings['logo_path'] ?? '');
 </main>
 
 <footer class="client-footer">
-    <p>© <?= e(date('Y')) ?> <?= e($studioName) ?></p>
+    <p>© <?= e(date('Y')) ?> — <?= e(mb_strtoupper($studioName)) ?></p>
+    <p>Galerie privée · non indexée</p>
 </footer>
 
 <?= View::section('scripts') ?>

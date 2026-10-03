@@ -207,6 +207,17 @@ final class ImmersiveHomeService
         return $luminance > 0.55 ? '#1a1915' : '#ffffff';
     }
 
+    /**
+     * Published portfolio photos (featured first), for the inner pages that
+     * borrow an image when their own is missing.
+     *
+     * @return array<int, array{full: string, thumb: string, title: string, meta: string, year: int}>
+     */
+    public function pictures(int $limit = 0): array
+    {
+        return $limit > 0 ? array_slice($this->works(), 0, $limit) : $this->works();
+    }
+
     /** Whether the page shows the photographer's work or the shipped placeholders. */
     public function usesPlaceholders(): bool
     {

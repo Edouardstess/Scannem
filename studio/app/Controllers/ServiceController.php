@@ -7,6 +7,8 @@ namespace App\Controllers;
 use App\Core\Request;
 use App\Core\Response;
 use App\Repositories\ServiceRepository;
+use App\Services\ImmersiveHomeService;
+use App\Services\SettingsService;
 
 final class ServiceController extends Controller
 {
@@ -20,6 +22,7 @@ final class ServiceController extends Controller
         return $this->view('public.services', [
             'title'    => 'Prestations',
             'services' => $this->services->published(),
+            'pictures' => $this->pictures(),
         ]);
     }
 
@@ -33,12 +36,23 @@ final class ServiceController extends Controller
         }
 
         return $this->view('public.service', [
-            'title'   => (string) $service['title'],
-            'service' => $service,
-            'others'  => array_values(array_filter(
+            'title'    => (string) $service['title'],
+            'service'  => $service,
+            'pictures' => $this->pictures(),
+            'others'   => array_values(array_filter(
                 $this->services->published(),
                 static fn (array $row): bool => (int) $row['id'] !== (int) $service['id']
             )),
         ]);
+    }
+
+    /**
+     * Portfolio photos standing in for a service that has no image of its own.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function pictures(): array
+    {
+        return (new ImmersiveHomeService((new SettingsService())->all()))->pictures(12);
     }
 }

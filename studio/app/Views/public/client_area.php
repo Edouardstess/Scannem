@@ -6,39 +6,33 @@ View::extend('layouts.public');
 View::startSection('content');
 ?>
 
-<section class="page-head">
-    <div class="wrap wrap--narrow">
-        <p class="section__eyebrow">Espace client</p>
-        <h1 class="page-head__title">Accéder à ma galerie</h1>
-        <p class="page-head__text">
-            Collez le lien reçu par e-mail, ou seulement le code qu'il contient.
-        </p>
-    </div>
+<section class="ph">
+    <p class="ph-kicker mono" data-reveal><span>Espace client</span><span class="ash">Galerie privée</span></p>
+    <h1 class="ph-title ph-title--long split"><?= View::include('partials.split', ['text' => 'Retrouver mes photos']) ?></h1>
+    <p class="ph-lead" data-reveal style="--i: 3">Collez le lien reçu par e-mail, ou seulement le code qu’il contient.</p>
 </section>
 
-<section class="section">
-    <div class="wrap wrap--narrow">
-        <form class="form form--compact" method="post" action="<?= e(url('/espace-client')) ?>">
-            <?= csrf_field() ?>
+<section class="sec sec--tight">
+    <form class="narrow" method="post" action="<?= e(url('/espace-client')) ?>" data-reveal>
+        <?= csrf_field() ?>
 
+        <div class="code-form">
             <div class="field">
                 <label for="code">Lien ou code de galerie</label>
                 <input type="text" id="code" name="code" required autocomplete="off" spellcheck="false"
-                       placeholder="https://… ou a8K29xPq…" value="<?= e(old('code')) ?>"
-                       <?= error_for('code') ? 'aria-invalid="true" aria-describedby="code-error"' : '' ?>>
-                <?php if ($message = error_for('code')): ?>
-                    <p class="field__error" id="code-error"><?= e($message) ?></p>
-                <?php endif; ?>
+                       placeholder="https://… ou a8K29xPq…" value="<?= e(old('code')) ?>"<?= error_for('code') ? ' aria-invalid="true" aria-describedby="code-error"' : '' ?>>
             </div>
+            <button class="btn btn--ink" type="submit">Ouvrir ma galerie <span class="arr" aria-hidden="true">→</span></button>
+        </div>
+        <?php if ($message = error_for('code')): ?>
+            <p class="field-error" id="code-error"><?= e($message) ?></p>
+        <?php endif; ?>
 
-            <button class="button" type="submit">Ouvrir ma galerie</button>
-        </form>
-
-        <p class="form__note form__note--centered">
-            Vous n'avez pas reçu votre lien&nbsp;?
-            <a href="<?= e(url('/contact')) ?>">Contactez-moi</a>.
+        <p class="form-note">
+            Vous n’avez pas reçu votre lien&nbsp;?
+            <a class="link-u" href="<?= e(url('/contact')) ?>">Contactez-moi</a>.
         </p>
-    </div>
+    </form>
 </section>
 
 <?php View::endSection(); ?>

@@ -103,6 +103,7 @@ final class HomeController extends Controller
         return $this->view('public.about', [
             'title'    => 'À propos',
             'services' => $this->services->published(),
+            'pictures' => (new ImmersiveHomeService((new SettingsService())->all(), $this->portfolio))->pictures(8),
         ]);
     }
 }

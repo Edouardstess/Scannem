@@ -35,5 +35,7 @@ $ctaInk = $immersive->accentInk();
     --color-background: <?= e($background) ?>;
     --color-cta: <?= e($cta) ?>;
     --color-cta-ink: <?= e($ctaInk) ?>;
+    --lime: <?= e($cta) ?>;
+    --lime-ink: <?= e($ctaInk) ?>;
 }
 </style>
