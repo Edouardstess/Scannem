@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lenfant-visual",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/serve-lenfant-visual.mjs"],
+      "port": 4385
+    }
+  ]
+}

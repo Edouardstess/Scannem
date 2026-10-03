@@ -1,0 +1,15 @@
+L'ENFANT VISUAL — site vitrine animé (modèle « Site Immersif »)
+
+Aperçu : ouvrir index.html dans un navigateur, ou lancer
+  node .claude/serve-lenfant-visual.mjs   puis http://localhost:4385
+
+Modifier les textes : content.js (partie haute, window.SITE_CONTENT) uniquement.
+Remplacer les photos : déposer vos images dans images/ sous les MÊMES noms
+et aux mêmes proportions (voir la liste ci-dessous), JPEG, 1600 px max.
+
+  hero.jpg, process.jpg ........ 1800 × 1200 (horizontales 3:2)
+  pr-1.jpg … pr-8.jpg .......... 640 de large, hauteurs 460 à 820 (réalisations)
+  fl-01.jpg … fl-10.jpg ........ petites, mélange portrait / paysage (nuage d'accueil)
+  tr-01.jpg … tr-20.jpg ........ petites (traînée sous la souris, fin de page)
+
+Les 40 images actuelles sont des visuels PROVISOIRES neutres : à remplacer.
